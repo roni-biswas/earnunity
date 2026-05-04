@@ -41,6 +41,7 @@ export default function RegisterPage() {
       } else {
         toast.success("Account created successfully!");
         // Redirect logic will go here
+        router.push("/login");
       }
     } catch (error) {
       toast.error("Something went wrong. Please try again.");
@@ -51,7 +52,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Header Section */}
-        <div className="bg-blue-600 p-6 text-white text-center">
+        <div className="bg-indigo-600 p-6 text-white text-center">
           <h1 className="text-2xl font-bold tracking-tight">EarnUnity</h1>
           <p className="text-blue-100 text-sm">
             Start your journey to financial freedom
@@ -155,12 +156,23 @@ export default function RegisterPage() {
           <button
             disabled={isSubmitting}
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? "Creating Account..." : "Get Started"}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+        <div className="p-4 bg-slate-50 text-center border-t border-slate-100">
+          <p className="text-slate-600 text-sm">
+            Already have an account?{" "}
+            <span
+              onClick={() => router.push("/login")}
+              className="text-indigo-600 font-bold cursor-pointer hover:underline"
+            >
+              Login Now
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );

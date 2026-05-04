@@ -2,6 +2,7 @@ import { Poppins, Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import "@/app/globals.css";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -27,8 +28,10 @@ export default function RootLayout({
       className={cn(poppins.className, "font-sans", geist.variable)}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster position="top-center" richColors />
+        <AuthProvider>
+          {children}
+          <Toaster position="top-center" richColors />
+        </AuthProvider>
       </body>
     </html>
   );
