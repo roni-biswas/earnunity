@@ -3,15 +3,14 @@ import connectDB from "@/lib/db";
 import { Submission } from "@/models/Submission";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { SubmissionFormSchema } from "@/lib/validations/submission";
+import { ApiSubmissionSchema } from "@/lib/validations/submission";
 
 export async function POST(req: Request) {
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
 
-    // Check if user is authenticated
-    if (!session) {
+    if (!session || !session.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
@@ -20,21 +19,30 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    // Validate request body using Zod
-    const validation = SubmissionFormSchema.safeParse(body);
+    // zod validation
+    const validation = ApiSubmissionSchema.safeParse(body);
     if (!validation.success) {
+      console.log(
+        "ZOD ERROR DETAILS:",
+        JSON.stringify(validation.error.format(), null, 2),
+      );
       return NextResponse.json(
         {
           success: false,
+          message: "Invalid data submitted",
           errors: validation.error.flatten().fieldErrors,
         },
         { status: 400 },
       );
     }
 
-    // Check if the user has already submitted proof for this specific job
+    const { jobId, proofText, proofImage } = validation.data;
+
+    console.log("User Job ID:", jobId);
+
+    // duplicate data check
     const existingSubmission = await Submission.findOne({
-      jobId: body.jobId,
+      jobId,
       userId: session.user.id,
     });
 
@@ -48,10 +56,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create new submission record
+    // save in database
     const newSubmission = await Submission.create({
-      ...body,
+      jobId,
       userId: session.user.id,
+      proofText,
+      proofImage,
+      status: "Pending",
     });
 
     return NextResponse.json(
@@ -63,9 +74,12 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Submission Error:", error);
+    console.error("Submission API Error:", error);
     return NextResponse.json(
-      { success: false, message: "Internal Server Error" },
+      {
+        success: false,
+        message: "Server Error. Please try again later.",
+      },
       { status: 500 },
     );
   }

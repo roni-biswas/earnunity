@@ -32,6 +32,7 @@ export default async function JobDetailsPage({ params }: Props) {
   // Fetch Job Data - Model explicit mapping
   const job = await Job.findById(id).populate({
     path: "userId",
+    model: User,
     select: "name",
     options: { strictPopulate: false },
   });

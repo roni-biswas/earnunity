@@ -22,9 +22,13 @@ export default function SubmissionForm({ jobId }: Props) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<SubmissionFormData>({
     resolver: zodResolver(SubmissionFormSchema),
+    defaultValues: {
+      jobId: jobId,
+    },
   });
 
   const onSubmit = async (data: SubmissionFormData) => {
@@ -32,7 +36,7 @@ export default function SubmissionForm({ jobId }: Props) {
     const toastId = toast.loading("Uploading proof and submitting...");
 
     try {
-      // 1. Upload image to our professional Cloudinary API
+      // ১. ইমেজ আপলোড
       const formData = new FormData();
       formData.append("file", data.proofImage[0]);
 
@@ -40,18 +44,21 @@ export default function SubmissionForm({ jobId }: Props) {
         method: "POST",
         body: formData,
       });
+
       const uploadData = await uploadRes.json();
 
-      if (!uploadData.success) throw new Error("Image upload failed");
+      if (!uploadRes.ok || !uploadData.success) {
+        throw new Error(uploadData.message || "Image upload failed");
+      }
 
-      // 2. Submit the final data to Submissions API
+      // ২. ফাইনাল সাবমিশন (নিশ্চিত করুন ফিল্ডের নামগুলো আপনার ApiSubmissionSchema এর সাথে মিলছে)
       const response = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId,
+          jobId: jobId, // সরাসরি প্রপস থেকে আসা jobId ব্যবহার করুন
           proofText: data.proofText,
-          proofImage: uploadData.imageUrl, // URL from Cloudinary
+          proofImage: uploadData.imageUrl, // আপনার লগ অনুযায়ী imageUrl
         }),
       });
 
@@ -59,14 +66,17 @@ export default function SubmissionForm({ jobId }: Props) {
 
       if (result.success) {
         toast.success("Work submitted successfully!", { id: toastId });
+        reset();
         router.push("/dashboard/tasks");
         router.refresh();
       } else {
+        // এপিআই থেকে আসা আসল এরর মেসেজটি দেখাবে
+        console.error("API Error Response:", result);
         toast.error(result.message || "Submission failed", { id: toastId });
       }
     } catch (error) {
       console.error("Submission Error:", error);
-      toast.error("Something went wrong. Please try again.", { id: toastId });
+      toast.error("Something went wrong. Please try again!", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -85,6 +95,8 @@ export default function SubmissionForm({ jobId }: Props) {
           Provide accurate proof to get paid.
         </p>
       </div>
+
+      <input type="hidden" value={jobId} {...register("jobId")} />
 
       {/* Proof Text Field */}
       <div className="space-y-2">
