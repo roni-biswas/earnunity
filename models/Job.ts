@@ -10,6 +10,11 @@ const JobSchema = new Schema(
       enum: ["YouTube", "Facebook", "App", "Survey", "Other"],
       default: "Other",
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     reward: { type: Number, required: true },
     instructions: { type: String, required: true }, // Step by step instructions
     proofType: {

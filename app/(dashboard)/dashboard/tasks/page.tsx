@@ -10,10 +10,12 @@ import {
   SquareFunction,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function TasksPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -62,49 +64,85 @@ export default function TasksPage() {
           jobs.map((job: any) => (
             <div
               key={job._id}
-              className="bg-white p-5 rounded-2xl border border-slate-100 hover:shadow-md transition group cursor-pointer"
+              onClick={() => router.push(`/dashboard/tasks/${job._id}`)} // Full card click logic
+              className="bg-white p-5 rounded-2xl border border-slate-100 hover:shadow-xl hover:shadow-indigo-50/50 transition-all duration-300 group cursor-pointer relative overflow-hidden"
             >
-              <div className="flex items-start justify-between">
+              {/* Hover Shine Effect (Optional - adds premium feel) */}
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-indigo-50/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+              <div className="flex items-start justify-between relative z-10">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
+                  {/* Icon Container */}
+                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 group-hover:border-indigo-100 group-hover:bg-indigo-50/50 transition-colors">
                     {getCategoryIcon(job.category)}
                   </div>
+
                   <div>
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition">
+                    <h3 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-1">
                       {job.title}
                     </h3>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                      <span className="flex items-center gap-1 font-medium">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs">
+                      <span className="flex items-center gap-1 font-semibold text-slate-400">
                         <Clock className="w-3 h-3" /> 2 mins
                       </span>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold text-[10px] uppercase">
                         {job.category}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Reward Section */}
                 <div className="text-right">
                   <p className="text-xl font-black text-emerald-600">
                     ৳{job.reward}
                   </p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">
+                  <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest">
                     Per Task
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t pt-4 border-slate-50">
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mr-10">
-                  <div
-                    className="bg-blue-500 h-full rounded-full"
-                    style={{
-                      width: `${(job.completedCount / job.totalVacancies) * 100}%`,
-                    }}
-                  ></div>
+              <div className="mt-6 border-t pt-5 border-slate-50 relative z-10">
+                {/* Progress Labels */}
+                <div className="flex justify-between items-end mb-2.5">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      Availability
+                    </p>
+                    <p className="text-sm font-black text-slate-700">
+                      {job.totalVacancies - (job.completedCount || 0)}{" "}
+                      <span className="text-slate-400 font-medium text-xs">
+                        Left
+                      </span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg inline-block">
+                      {Math.round(
+                        ((job.completedCount || 0) / job.totalVacancies) * 100,
+                      )}
+                      % Filled
+                    </p>
+                  </div>
                 </div>
-                <button className="flex items-center gap-1 text-sm font-bold text-blue-600 whitespace-nowrap">
-                  Details <ChevronRight className="w-4 h-4" />
-                </button>
+
+                {/* Progress Bar & CTA */}
+                <div className="flex items-center gap-5">
+                  <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-linear-to-r from-indigo-500 to-blue-400 h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(99,102,241,0.3)]"
+                      style={{
+                        width: `${((job.completedCount || 0) / job.totalVacancies) * 100}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 text-sm font-black text-indigo-600 group-hover:gap-2 transition-all">
+                    Details
+                    <ChevronRight className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  </div>
+                </div>
               </div>
             </div>
           ))
