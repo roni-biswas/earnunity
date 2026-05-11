@@ -38,8 +38,6 @@ export async function POST(req: Request) {
 
     const { jobId, proofText, proofImage } = validation.data;
 
-    console.log("User Job ID:", jobId);
-
     // duplicate data check
     const existingSubmission = await Submission.findOne({
       jobId,
