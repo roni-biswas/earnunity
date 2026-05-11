@@ -1,15 +1,14 @@
-import z from "zod";
+import * as z from "zod";
 
-export const JobSchema = z.object({
+export const JobFormSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
-  instructions: z.string().min(20, "Instructions are required for users"),
-  reward: z.coerce.number().min(1, "Reward must be at least 1 Taka"),
-  totalVacancies: z.coerce.number().min(1, "At least 1 vacancy required"),
   category: z.enum(["YouTube", "Facebook", "App", "Survey", "Other"]),
-  externalLink: z
-    .string()
-    .url("Valid URL is required")
-    .optional()
-    .or(z.literal("")),
+  reward: z.coerce.number().min(0.01, "Reward must be greater than 0"),
+  totalVacancies: z.coerce.number().min(1, "At least 1 vacancy required"),
+  instructions: z.string().min(10, "Instructions are required"),
+  externalLink: z.string().url("Invalid URL").optional().or(z.literal("")),
+  proofType: z.enum(["Screenshot", "Username", "TransactionID"]),
 });
+
+export type JobFormData = z.infer<typeof JobFormSchema>;
