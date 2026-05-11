@@ -14,7 +14,6 @@ export default function AdminLayout({
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Submissions", href: "/admin/submissions", icon: Send },
     { name: "Jobs", href: "/admin/jobs", icon: FileText },
-    { name: "Add New Jobs", href: "/admin/jobs/new", icon: FileText },
   ];
 
   return (
