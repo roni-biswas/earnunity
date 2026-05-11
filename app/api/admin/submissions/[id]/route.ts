@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Submission } from "@/models/Submission";
-import { User } from "@/models/User"; // ইউজার মডেল ইম্পোর্ট করুন
+import { User } from "@/models/User";
+import { Job } from "@/models/Job";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -13,17 +14,16 @@ export async function PATCH(
     await connectDB();
     const session = await getServerSession(authOptions);
 
+    // Admin check
     if (!session || session.user.role !== "admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
     }
 
-    const { status } = await req.json(); // status ('Approved' or 'Rejected')
+    const { status } = await req.json(); // 'Approved' or 'Rejected'
     const submissionId = params.id;
 
-    // submitted
     const submission =
       await Submission.findById(submissionId).populate("jobId");
-
     if (!submission) {
       return NextResponse.json(
         { message: "Submission not found" },
@@ -31,24 +31,27 @@ export async function PATCH(
       );
     }
 
-    if (submission.status !== "Pending") {
-      return NextResponse.json(
-        { message: "Already processed" },
-        { status: 400 },
-      );
-    }
-
-    // if admin approved
     if (status === "Approved") {
-      const amountToAdd = submission.jobId.earnings; // job payment amount
-
-      // update user amount
+      // Increase Balance (reward)
       await User.findByIdAndUpdate(submission.userId, {
-        $inc: { balance: amountToAdd }, // balance
+        $inc: { balance: submission.jobId.reward },
       });
+
+      // Job completed increase count
+      const updatedJob = await Job.findByIdAndUpdate(
+        submission.jobId._id,
+        { $inc: { completedCount: 1 } },
+        { new: true },
+      );
+
+      // Vacancies is full then show status FULL
+      if (updatedJob.completedCount >= updatedJob.totalVacancies) {
+        updatedJob.status = "Full";
+        await updatedJob.save();
+      }
     }
 
-    // updated submission status
+    // Submission status update
     submission.status = status;
     await submission.save();
 
@@ -57,7 +60,10 @@ export async function PATCH(
       message: `Submission ${status} successfully!`,
     });
   } catch (error) {
-    console.error("Update Error:", error);
-    return NextResponse.json({ message: "Update failed" }, { status: 500 });
+    console.error("Admin Update Error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

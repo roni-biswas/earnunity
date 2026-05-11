@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     // Model validation and creation
     const newJob = await Job.create({
       ...body,
+      userId: session.user.id,
       completedCount: 0,
       status: "Active",
     });
