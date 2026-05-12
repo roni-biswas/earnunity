@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const validatedData = Job.create({
+    const validatedData = await Job.create({
       ...body,
       userId: session.user.id,
     });

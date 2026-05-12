@@ -11,6 +11,7 @@ import {
   Briefcase,
   CreditCard,
   ChevronRight,
+  PlusCircle,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import { signOut } from "next-auth/react";
 
 const menuItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Create New Jobs", href: "/admin/jobs/create", icon: PlusCircle },
   { name: "Manage Users", href: "/admin/users", icon: Users },
   { name: "Job Tasks", href: "/admin/jobs", icon: Briefcase },
   { name: "Withdraw Requests", href: "/admin/withdraws", icon: CreditCard },

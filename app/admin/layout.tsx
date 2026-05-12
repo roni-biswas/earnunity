@@ -10,6 +10,7 @@ import {
   CreditCard,
   Menu,
   Bell,
+  PlusCircle,
 } from "lucide-react";
 
 // Shadcn UI Components
@@ -21,6 +22,7 @@ import SidebarContent from "@/components/dashboard/AdminSidebarContent";
 
 const menuItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Create New Jobs", href: "/admin/jobs/create", icon: PlusCircle },
   { name: "Manage Users", href: "/admin/users", icon: Users },
   { name: "Job Tasks", href: "/admin/jobs", icon: Briefcase },
   { name: "Withdraw Requests", href: "/admin/withdraws", icon: CreditCard },
