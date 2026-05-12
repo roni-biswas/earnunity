@@ -20,6 +20,7 @@ const WithdrawSchema = new Schema(
       enum: ["pending", "completed", "rejected"],
       default: "pending",
     },
+    statusUpdateDate: { type: Date },
   },
   { timestamps: true },
 );
