@@ -10,6 +10,7 @@ const UserSchema = new Schema(
     deviceId: { type: String, required: true, unique: true },
     referredBy: { type: String, default: null },
     isBlocked: { type: Boolean, default: false },
+    image: { type: String },
   },
   { timestamps: true },
 );
