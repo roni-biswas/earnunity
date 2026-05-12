@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Submission } from "@/models/Submission";
-import { User } from "@/models/User"; // নিশ্চিত করুন এই মডেলগুলো ইম্পোর্ট আছে
+import { User } from "@/models/User";
 import { Job } from "@/models/Job";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";

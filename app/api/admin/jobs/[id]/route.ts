@@ -7,8 +7,9 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
+    const { id } = await params;
     await connectDB();
-    await Job.findByIdAndDelete(params.id);
+    await Job.findByIdAndDelete(id);
     return NextResponse.json({ success: true, message: "Job deleted" });
   } catch (error) {
     return NextResponse.json({ message: "Delete failed" }, { status: 500 });

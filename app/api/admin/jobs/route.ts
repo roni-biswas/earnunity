@@ -4,19 +4,47 @@ import { Job } from "@/models/Job";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 403 },
+      );
     }
 
-    const jobs = await Job.find().sort({ createdAt: -1 });
-    return NextResponse.json({ success: true, data: jobs });
+    // get page and limit
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "6");
+    const skip = (page - 1) * limit;
+
+    // Fetch data
+    const jobs = await Job.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Total count of jobs
+    const totalJobs = await Job.countDocuments();
+
+    return NextResponse.json({
+      success: true,
+      data: jobs,
+      pagination: {
+        total: totalJobs,
+        page,
+        totalPages: Math.ceil(totalJobs / limit),
+      },
+    });
   } catch (error) {
-    return NextResponse.json({ message: "Error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Server Error" },
+      { status: 500 },
+    );
   }
 }
 
