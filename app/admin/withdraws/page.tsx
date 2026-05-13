@@ -1,6 +1,17 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -9,42 +20,35 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "sonner"; // Assuming you use sonner or similar for notifications
 
-interface WithdrawalRequest {
+// --- Types ---
+interface WithdrawRequest {
   _id: string;
-  userId: {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  userId: { name: string; email: string } | any;
   amount: number;
   method: string;
-  accountNumber: string;
+  number: string;
   status: "pending" | "completed" | "rejected";
   createdAt: string;
 }
 
 export default function AdminWithdrawals() {
-  const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
+  const [data, setData] = useState<WithdrawRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch all withdrawal requests
-  const fetchRequests = useCallback(async () => {
+  // Fetch withdrawals from API
+  const fetchWithdrawals = useCallback(async (page: number) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/withdraw/history");
+      const res = await fetch(`/api/admin/withdraw?page=${page}&limit=10`);
       const result = await res.json();
       if (result.success) {
-        setRequests(result.data);
-      } else {
-        toast.error(result.message || "Failed to load data");
+        setData(result.data);
+        setTotalPages(result.pagination.totalPages);
       }
-    } catch (error) {
+    } catch (err) {
       toast.error("Failed to load withdrawal requests");
     } finally {
       setLoading(false);
@@ -52,143 +56,150 @@ export default function AdminWithdrawals() {
   }, []);
 
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    fetchWithdrawals(currentPage);
+  }, [currentPage, fetchWithdrawals]);
 
-  // Handle Approve/Reject Action
-  const handleAction = async (id: string, status: "completed" | "rejected") => {
-    setActionLoading(id);
+  // Handle status update (Complete / Reject)
+  const handleUpdate = async (id: string, status: "completed" | "rejected") => {
+    const toastId = toast.loading(`Processing ${status}...`);
     try {
       const res = await fetch(`/api/admin/withdraw/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-
       const result = await res.json();
       if (result.success) {
-        toast.success(`Request ${status} successfully`);
-        fetchRequests(); // Refresh data
+        toast.success(result.message, { id: toastId });
+        fetchWithdrawals(currentPage);
       } else {
-        toast.error(result.message);
+        toast.error(result.message, { id: toastId });
       }
-    } catch (error) {
-      toast.error("Something went wrong");
-    } finally {
-      setActionLoading(null);
+    } catch (err) {
+      toast.error("An error occurred", { id: toastId });
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-slate-800">
-          Withdrawal Requests
-        </h1>
-        <Badge variant="outline" className="text-slate-500">
-          Total: {requests.length}
-        </Badge>
-      </div>
+      <h1 className="text-2xl font-bold">Withdrawal Management</h1>
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Account No</TableHead>
+              <TableHead>Amount & Method</TableHead>
+              <TableHead>Payment Details</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {requests.map((req) => (
-              <TableRow key={req._id}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {req.userId?.name || "Unknown"}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {req.userId?.email}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell className="capitalize">{req.method}</TableCell>
-                <TableCell className="font-bold text-slate-900">
-                  ৳ {req.amount}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {req.accountNumber}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    className={
-                      req.status === "pending"
-                        ? "bg-amber-100 text-amber-700 hover:bg-amber-100"
-                        : req.status === "completed"
-                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
-                          : "bg-rose-100 text-rose-700 hover:bg-rose-100"
-                    }
-                  >
-                    {req.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  {req.status === "pending" ? (
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                        disabled={!!actionLoading}
-                        onClick={() => handleAction(req._id, "completed")}
-                      >
-                        {actionLoading === req._id ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <CheckCircle size={14} className="mr-1" />
-                        )}
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                        disabled={!!actionLoading}
-                        onClick={() => handleAction(req._id, "rejected")}
-                      >
-                        <XCircle size={14} className="mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-400">Processed</span>
-                  )}
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-40 text-center">
+                  <Loader2 className="animate-spin mx-auto text-indigo-600" />
                 </TableCell>
               </TableRow>
-            ))}
-            {requests.length === 0 && (
+            ) : data.length > 0 ? (
+              data.map((item) => (
+                <TableRow key={item._id}>
+                  <TableCell>
+                    <div className="font-semibold">
+                      {item.userId?.name || "N/A"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-bold text-indigo-600">
+                      ৳ {item.amount}
+                    </div>
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {item.method}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm">
+                      <Phone size={12} /> {item.number}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        item.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : item.status === "completed"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                      }
+                    >
+                      {item.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {item.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-emerald-600 h-8 px-2"
+                          onClick={() => handleUpdate(item._id, "completed")}
+                        >
+                          <CheckCircle size={16} className="mr-1" /> Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-rose-600 h-8 px-2"
+                          onClick={() => handleUpdate(item._id, "rejected")}
+                        >
+                          <XCircle size={16} className="mr-1" /> Reject
+                        </Button>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
               <TableRow>
                 <TableCell
-                  colSpan={6}
-                  className="text-center py-10 text-slate-400"
+                  colSpan={5}
+                  className="h-40 text-center text-slate-400"
                 >
-                  No withdrawal requests found.
+                  No requests found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-6 py-4 border-t bg-slate-50/50">
+          <p className="text-xs text-slate-500">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              <ChevronLeft size={14} /> Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Next <ChevronRight size={14} />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
