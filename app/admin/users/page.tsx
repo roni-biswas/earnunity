@@ -48,7 +48,7 @@ interface User {
   name: string;
   email: string;
   balance: number;
-  isBanned: boolean;
+  isBlocked: boolean;
   createdAt: string;
 }
 
@@ -133,6 +133,35 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Function to handle Block/Unblock toggle
+  const handleToggleBlock = async (userId: string) => {
+    // Show a loading toast for UX
+    const toastId = toast.loading("Updating account status...");
+
+    try {
+      // Calling the updated block route
+      const res = await fetch(`/api/admin/users/${userId}/block`, {
+        method: "PATCH",
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success(result.message, { id: toastId });
+
+        // Update the local users state with the new isBlocked value
+        setUsers((prevUsers) =>
+          prevUsers.map((u) =>
+            u._id === userId ? { ...u, isBlocked: result.data.isBlocked } : u,
+          ),
+        );
+      } else {
+        toast.error(result.message || "Something went wrong", { id: toastId });
+      }
+    } catch (error) {
+      toast.error("Failed to communicate with server", { id: toastId });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -193,14 +222,14 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.isBanned ? "destructive" : "secondary"}
+                      variant={user.isBlocked ? "destructive" : "secondary"}
                       className={
-                        !user.isBanned
-                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
+                        !user.isBlocked
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-100"
                           : ""
                       }
                     >
-                      {user.isBanned ? "Banned" : "Active"}
+                      {user.isBlocked ? "Blocked" : "Active"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-slate-500 text-sm">
@@ -227,15 +256,23 @@ export default function AdminUsersPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className={
-                            user.isBanned ? "text-emerald-600" : "text-rose-600"
+                            user.isBlocked
+                              ? "text-emerald-600 font-medium"
+                              : "text-rose-600 font-medium"
                           }
+                          onClick={() => handleToggleBlock(user._id)}
                         >
-                          {user.isBanned ? (
-                            <ShieldCheck size={14} className="mr-2" />
+                          {user.isBlocked ? (
+                            <>
+                              <ShieldCheck size={14} className="mr-2" />
+                              Unblock Access
+                            </>
                           ) : (
-                            <UserMinus size={14} className="mr-2" />
+                            <>
+                              <UserMinus size={14} className="mr-2" />
+                              Block Account
+                            </>
                           )}
-                          {user.isBanned ? "Unban User" : "Ban User"}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
