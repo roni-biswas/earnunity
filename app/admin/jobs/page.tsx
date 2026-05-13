@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   Plus,
-  Trash2,
-  Users,
-  DollarSign,
-  Loader2,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,194 +34,208 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export default function AdminJobsPage() {
+export default function AdminJobsList() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
-  const fetchJobs = async (currentPage: number) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/jobs?page=${currentPage}&limit=6`);
-      const result = await res.json();
+  // Wrapped in useCallback to prevent unnecessary re-renders
+  const fetchJobs = useCallback(
+    async (page: number) => {
+      setLoading(true);
+      try {
+        // Ensure the API URL matches your backend route exactly
+        const res = await fetch(`/api/admin/jobs?page=${page}&limit=${limit}`);
+        const result = await res.json();
 
-      if (res.ok && result.success) {
-        setJobs(result.data);
-        setTotalPages(result.pagination?.totalPages || 1);
-      } else {
-        toast.error(result.message || "Failed to load jobs");
+        if (result.success) {
+          setJobs(result.data);
+          // Correctly mapping pagination data from your API structure
+          setTotalPages(result.pagination?.totalPages || 1);
+          setCurrentPage(result.pagination?.currentPage || 1);
+        }
+      } catch (error) {
+        toast.error("Failed to load jobs");
+        console.error("Fetch Error:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      toast.error("Network error: Could not fetch jobs");
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [limit],
+  );
 
   useEffect(() => {
-    fetchJobs(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [page]);
+    fetchJobs(currentPage);
+  }, [currentPage, fetchJobs]);
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(true);
     try {
       const res = await fetch(`/api/admin/jobs/${id}`, { method: "DELETE" });
       const result = await res.json();
 
-      if (res.ok && result.success) {
+      if (result.success) {
         toast.success("Job deleted successfully");
-        if (jobs.length === 1 && page > 1) {
-          setPage(page - 1);
+        // If current page becomes empty after delete, go back a page
+        if (jobs.length === 1 && currentPage > 1) {
+          setCurrentPage((prev) => prev - 1);
         } else {
-          fetchJobs(page);
+          fetchJobs(currentPage);
         }
       } else {
         toast.error(result.message || "Delete failed");
       }
     } catch (error) {
-      toast.error("An error occurred during deletion");
+      toast.error("Error deleting job");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Job Management</h1>
-        <Link
-          href="/admin/jobs/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
-        >
-          <Plus size={18} /> Post New Job
+        <div>
+          <h1 className="text-2xl font-bold">Job Management</h1>
+          <p className="text-sm text-muted-foreground">
+            Total Pages: {totalPages}
+          </p>
+        </div>
+        <Link href="/admin/jobs/create">
+          <Button className="bg-indigo-600 hover:bg-indigo-700">
+            <Plus className="mr-2 h-4 w-4" /> Post New Job
+          </Button>
         </Link>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobs.map((job: any) => (
-              <div
-                key={job._id}
-                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      job.status === "Active"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    {job.status}
-                  </span>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="text-gray-400 hover:text-red-500 transition">
-                        <Trash2 size={18} />
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-2xl">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Are you absolutely sure?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently
-                          delete the job "<strong>{job.title}</strong>".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl">
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(job._id)}
-                          className="bg-red-500 hover:bg-red-600 rounded-xl"
-                        >
-                          Delete Job
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-
-                <h3 className="font-bold text-gray-800 text-lg mb-2 line-clamp-1">
-                  {job.title}
-                </h3>
-
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Users size={14} /> {job.completedCount}/
-                    {job.totalVacancies}
+      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader className="bg-slate-50">
+            <TableRow>
+              <TableHead>Job Title</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Reward</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-40 text-center">
+                  <div className="flex justify-center items-center">
+                    <Loader2 className="animate-spin mr-2 text-indigo-600" />
+                    <span>Loading jobs...</span>
                   </div>
-                  <div className="flex items-center gap-1 font-bold text-blue-600">
-                    <DollarSign size={14} /> {job.reward}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-                  <span className="text-xs text-gray-400">
-                    ID: {job._id?.slice(-6)}
-                  </span>
-                  <Link
-                    href={`/admin/jobs/edit/${job._id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Edit Details
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex flex-col items-center gap-4 pt-10 pb-10">
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="p-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50 transition shadow-sm"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setPage(i + 1)}
-                      className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
-                        page === i + 1
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "bg-white text-gray-600 hover:bg-gray-100 border border-transparent"
-                      }`}
+                </TableCell>
+              </TableRow>
+            ) : jobs.length > 0 ? (
+              jobs.map((job: any) => (
+                <TableRow key={job._id}>
+                  <TableCell className="font-medium">{job.title}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{job.category}</Badge>
+                  </TableCell>
+                  <TableCell className="font-bold text-indigo-600">
+                    ৳ {job.reward}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        job.status === "active"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100"
+                      }
                     >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="p-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50 transition shadow-sm"
+                      {job.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {/* shadcn AlertDialog for Delete */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <div className="flex items-center gap-2 text-rose-600">
+                            <AlertTriangle size={20} />
+                            <AlertDialogTitle>
+                              Are you absolutely sure?
+                            </AlertDialogTitle>
+                          </div>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete the job &quot;
+                            <span className="font-semibold text-slate-900">
+                              {job.title}
+                            </span>
+                            &quot; and remove all related data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(job._id)}
+                            className="bg-rose-600 hover:bg-rose-700"
+                          >
+                            {isDeleting ? "Deleting..." : "Delete Job"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-40 text-center text-slate-400"
                 >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+                  No jobs found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
 
-      {!loading && jobs.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-2xl border border-dashed text-gray-400">
-          No jobs found.
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between px-6 py-4 border-t bg-slate-50/50">
+          <p className="text-sm text-slate-500 font-medium">
+            Page {currentPage} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1 || loading}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+            >
+              <ChevronLeft size={16} className="mr-1" /> Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages || loading}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+            >
+              Next <ChevronRight size={16} className="ml-1" />
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

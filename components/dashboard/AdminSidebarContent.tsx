@@ -22,8 +22,8 @@ import { signOut } from "next-auth/react";
 const menuItems = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
   { name: "Create New Jobs", href: "/admin/jobs/create", icon: PlusCircle },
+  { name: "Job List Management", href: "/admin/jobs", icon: Briefcase },
   { name: "Manage Users", href: "/admin/users", icon: Users },
-  { name: "Job Tasks", href: "/admin/jobs", icon: Briefcase },
   { name: "Withdraw Requests", href: "/admin/withdraws", icon: CreditCard },
   { name: "Submissions", href: "/admin/submissions", icon: Send },
 ];
