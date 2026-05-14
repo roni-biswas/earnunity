@@ -51,13 +51,13 @@ export default function AdminSubmissionsPage() {
     fetchSubmissions(pagination.page);
   }, [pagination.page]);
 
-  const handleAction = async (id: string, status: "Approved" | "Rejected") => {
+  const handleAction = async (id: string, status: "approved" | "rejected") => {
     setProcessingId(id);
     try {
       const res = await fetch(`/api/admin/submissions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: status.toLowerCase() }),
       });
 
       const result = await res.json();
@@ -167,7 +167,7 @@ export default function AdminSubmissionsPage() {
                   <div className="flex justify-end gap-2.5">
                     <button
                       disabled={processingId === sub._id}
-                      onClick={() => handleAction(sub._id, "Approved")}
+                      onClick={() => handleAction(sub._id, "approved")}
                       className="p-2.5 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition disabled:opacity-50"
                       title="Approve"
                     >
@@ -175,7 +175,7 @@ export default function AdminSubmissionsPage() {
                     </button>
                     <button
                       disabled={processingId === sub._id}
-                      onClick={() => handleAction(sub._id, "Rejected")}
+                      onClick={() => handleAction(sub._id, "rejected")}
                       className="p-2.5 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition disabled:opacity-50"
                       title="Reject"
                     >
@@ -214,6 +214,8 @@ export default function AdminSubmissionsPage() {
               onClick={() =>
                 setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
               }
+              title="pagination"
+              type="button"
               disabled={pagination.page === 1}
               className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition disabled:opacity-50"
             >
@@ -223,6 +225,8 @@ export default function AdminSubmissionsPage() {
               onClick={() =>
                 setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
               }
+              title="pagination"
+              type="button"
               disabled={pagination.page === pagination.totalPages}
               className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition disabled:opacity-50"
             >
@@ -234,19 +238,24 @@ export default function AdminSubmissionsPage() {
 
       {/* 🖼️ Image Modal Popup */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-[999] p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-999 p-4 backdrop-blur-sm">
           <div className="relative bg-white rounded-3xl p-3 shadow-2xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <button
               onClick={() => setSelectedImage(null)}
+              title="Close Model"
+              type="button"
               className="absolute top-4 right-4 p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-red-100 hover:text-red-700 transition"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="overflow-auto p-2">
-              <img
+              <Image
                 src={selectedImage}
                 alt="Proof Screenshot"
-                className="w-full h-auto rounded-xl object-contain"
+                fill
+                className="object-contain rounded-xl"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                priority
               />
             </div>
           </div>
