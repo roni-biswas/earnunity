@@ -239,22 +239,25 @@ export default function AdminSubmissionsPage() {
       {/* 🖼️ Image Modal Popup */}
       {selectedImage && (
         <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-999 p-4 backdrop-blur-sm">
-          <div className="relative bg-white rounded-3xl p-3 shadow-2xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="relative bg-white rounded-3xl p-3 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Close Button */}
             <button
               onClick={() => setSelectedImage(null)}
-              title="Close Model"
+              title="Close Modal"
               type="button"
-              className="absolute top-4 right-4 p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-red-100 hover:text-red-700 transition"
+              className="absolute top-4 right-4 z-10 p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-red-100 hover:text-red-700 transition"
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="overflow-auto p-2">
+
+            {/* Image Container - Ekhane 'relative' ebong 'h-full' ba fixed height lagbe */}
+            <div className="relative flex-1 w-full min-h-75 md:min-h-125 mt-10 overflow-hidden">
               <Image
                 src={selectedImage}
                 alt="Proof Screenshot"
                 fill
-                className="object-contain rounded-xl"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="rounded-xl object-contain" // 'w-full h-auto' dorkar nai fill thakle
+                sizes="(max-width: 768px) 100vw, 80vw"
                 priority
               />
             </div>

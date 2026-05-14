@@ -149,7 +149,7 @@ export default function AdminJobsList() {
                       className={
                         job.status === "active"
                           ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-100"
+                          : "bg-slate-100 text-black"
                       }
                     >
                       {job.status}
