@@ -6,7 +6,7 @@ import { Submission } from "@/models/Submission";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
-import SubmissionForm from "./SubmissionForm";
+import SubmissionForm from "./SubmissionForm"; // Ensure this client component exists
 import {
   BadgeCheck,
   DollarSign,
@@ -14,6 +14,7 @@ import {
   Users,
   FileText,
   AlertCircle,
+  ChevronLeft,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -22,24 +23,21 @@ interface Props {
 }
 
 export default async function JobDetailsPage({ params }: Props) {
-  const { id } = await params; // Awaiting params correctly
+  const { id } = await params;
 
   await connectDB();
   const session = await getServerSession(authOptions);
 
   if (!session) redirect("/login");
 
-  // Fetch Job Data - Model explicit mapping
+  // Fetch Job Data with proper population
   const job = await Job.findById(id).populate({
     path: "userId",
     model: User,
     select: "name",
-    options: { strictPopulate: false },
   });
 
-  if (!job) {
-    notFound();
-  }
+  if (!job) notFound();
 
   const existingSubmission = await Submission.findOne({
     jobId: id,
@@ -47,135 +45,183 @@ export default async function JobDetailsPage({ params }: Props) {
   });
 
   const totalSlots = job.totalVacancies || 0;
-  const completionPercentage = Math.round(
-    (job.completedCount / (totalSlots || 1)) * 100,
+  const completionPercentage = Math.min(
+    Math.round((job.completedCount / (totalSlots || 1)) * 100),
+    100,
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href="/dashboard/tasks"
-          className="text-sm text-blue-600 hover:underline mb-4 inline-block"
-        >
-          ← Back to Tasks
-        </Link>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900">
-              {job.title}
-            </h1>
-            <p className="text-slate-500 mt-2 flex items-center gap-2">
-              <BadgeCheck className="w-4 h-4 text-green-500" />
-              Posted by:{" "}
-              <span className="font-semibold text-slate-700">
-                {job.userId?.name || "Verified Client"}
-              </span>
-            </p>
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
+      {/* Navigation */}
+      <Link
+        href="/dashboard/tasks"
+        className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-400 transition-colors group"
+      >
+        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        Back to Missions
+      </Link>
+
+      {/* Header Section */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem]">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-500/20">
+              {job.category || "Task"}
+            </span>
           </div>
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center gap-4">
-            <div className="bg-blue-600 p-3 rounded-xl">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-blue-600 font-bold uppercase">
-                Earn Reward
-              </p>
-              <p className="text-2xl font-black text-blue-900">
-                ${job.reward.toFixed(2)}
-              </p>
-            </div>
+          <h1 className="text-3xl md:text-4xl font-black text-white italic tracking-tight">
+            {job.title}
+          </h1>
+          <p className="text-slate-400 flex items-center gap-2 text-sm">
+            <BadgeCheck className="w-4 h-4 text-emerald-500" />
+            Client:{" "}
+            <span className="font-bold text-slate-200">
+              {job.userId?.name || "Verified Client"}
+            </span>
+          </p>
+        </div>
+
+        <div className="bg-indigo-600 rounded-[2rem] p-6 flex items-center gap-5 shadow-xl shadow-indigo-600/20 border border-white/10">
+          <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
+            <DollarSign className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <p className="text-[10px] text-indigo-200 font-black uppercase tracking-[0.2em]">
+              Reward Amount
+            </p>
+            <p className="text-3xl font-black text-white italic">
+              ৳{job.reward}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
         <div className="lg:col-span-2 space-y-8">
-          <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <FileText className="w-5 h-5 text-blue-600" />
-              <h2 className="text-xl font-bold text-slate-800">
-                Job Description & Instructions
+          <section className="bg-slate-900/20 border border-slate-800 p-8 rounded-[2.5rem] relative overflow-hidden">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                <FileText className="w-5 h-5 text-indigo-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                Mission Instructions
               </h2>
             </div>
 
-            <div className="prose prose-slate max-w-none">
-              <p className="whitespace-pre-line text-slate-600 leading-relaxed">
+            <div className="prose prose-invert max-w-none">
+              <p className="whitespace-pre-line text-slate-400 leading-relaxed font-medium">
                 {job.instructions || job.description}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-10">
-              <div className="bg-slate-50 p-4 rounded-2xl">
-                <p className="text-xs text-slate-400 font-bold uppercase mb-1">
+            {/* Quick Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
+              <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
+                <p className="text-[10px] text-slate-500 font-black uppercase mb-2 tracking-widest">
                   Time Limit
                 </p>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-semibold">24 Hours</span>
+                <div className="flex items-center gap-2 text-white font-bold">
+                  <Clock className="w-4 h-4 text-indigo-400" /> 24 Hours
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 rounded-2xl">
-                <p className="text-xs text-slate-400 font-bold uppercase mb-1">
-                  Capacity
+
+              <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
+                <p className="text-[10px] text-slate-500 font-black uppercase mb-2 tracking-widest">
+                  Available Slots
                 </p>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Users className="w-4 h-4" />
-                  <span className="font-semibold">
-                    {job.completedCount} / {totalSlots}
-                  </span>
+                <div className="flex items-center gap-2 text-white font-bold">
+                  <Users className="w-4 h-4 text-indigo-400" />
+                  {totalSlots - job.completedCount} / {totalSlots} Left
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 rounded-2xl col-span-2 md:col-span-1">
-                <p className="text-xs text-slate-400 font-bold uppercase mb-1">
+
+              <div className="bg-slate-800/30 border border-slate-800 p-5 rounded-2xl">
+                <p className="text-[10px] text-slate-500 font-black uppercase mb-2 tracking-widest">
                   Completion
                 </p>
-                <div className="w-full bg-slate-200 h-2 rounded-full mt-2">
+                <div className="w-full bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="bg-indigo-500 h-full rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-1000"
                     style={{ width: `${completionPercentage}%` }}
-                  ></div>
+                  />
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl flex gap-4">
-            <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+          {/* Warning Card */}
+          <div className="bg-amber-500/5 border border-amber-500/20 p-6 rounded-[2rem] flex gap-5 items-center">
+            <div className="bg-amber-500/20 p-3 rounded-xl">
+              <AlertCircle className="w-6 h-6 text-amber-500" />
+            </div>
             <div>
-              <h4 className="font-bold text-amber-900">Important Warning</h4>
-              <p className="text-sm text-amber-700 mt-1">
-                Submitting fake proof or using multiple accounts will result in
-                a permanent ban.
+              <h4 className="font-bold text-amber-500">Security Warning</h4>
+              <p className="text-xs text-amber-500/70 mt-1 font-medium">
+                Submitting fake proof or repeating tasks will lead to a{" "}
+                <span className="font-bold underline">
+                  permanent account ban
+                </span>
+                .
               </p>
             </div>
           </div>
         </div>
 
+        {/* Sidebar - Submission Form */}
         <div className="lg:col-span-1">
-          <div className="sticky top-8">
+          <div className="sticky top-8 space-y-6">
             {existingSubmission ? (
-              <div className="bg-green-50 border border-green-200 p-8 rounded-3xl text-center">
-                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BadgeCheck className="w-8 h-8 text-green-600" />
+              <div className="bg-emerald-500/5 border border-emerald-500/20 p-8 rounded-[2.5rem] text-center space-y-4">
+                <div className="bg-emerald-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <BadgeCheck className="w-10 h-10 text-emerald-500" />
                 </div>
-                <h3 className="text-xl font-bold text-green-900">
-                  Proof Submitted
-                </h3>
-                <p className="text-green-700 text-sm mt-2">
-                  Status: <strong>{existingSubmission.status}</strong>
-                </p>
+                <div>
+                  <h3 className="text-xl font-bold text-white italic">
+                    Proof Submitted!
+                  </h3>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Our team is reviewing your work.
+                  </p>
+                </div>
+                <div className="inline-block px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl">
+                  <p className="text-xs text-slate-500 font-black uppercase">
+                    Current Status
+                  </p>
+                  <p
+                    className={cn(
+                      "text-sm font-black uppercase tracking-widest mt-1",
+                      existingSubmission.status === "approved"
+                        ? "text-emerald-500"
+                        : "text-amber-500",
+                    )}
+                  >
+                    {existingSubmission.status}
+                  </p>
+                </div>
               </div>
             ) : job.completedCount >= totalSlots ? (
-              <div className="bg-red-50 border border-red-200 p-8 rounded-3xl text-center">
-                <h3 className="text-xl font-bold text-red-900">Task Full</h3>
+              <div className="bg-rose-500/5 border border-rose-500/20 p-8 rounded-[2.5rem] text-center">
+                <h3 className="text-xl font-bold text-white italic">
+                  Missions Full
+                </h3>
+                <p className="text-slate-400 text-sm mt-2">
+                  All slots are taken for this task.
+                </p>
               </div>
             ) : (
-              <SubmissionForm jobId={id} />
+              <div className="bg-slate-900/40 border border-slate-800 p-1 rounded-[2.5rem] overflow-hidden">
+                <SubmissionForm jobId={id} />
+              </div>
             )}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Utility function for conditional classes
+function cn(...classes: string[]) {
+  return classes.filter(Boolean).join(" ");
 }

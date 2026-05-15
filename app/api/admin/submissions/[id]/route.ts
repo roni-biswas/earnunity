@@ -3,46 +3,35 @@ import connectDB from "@/lib/db";
 import { Submission } from "@/models/Submission";
 import { User } from "@/models/User";
 import { Job } from "@/models/Job";
-import { Transaction } from "@/models/Transaction"; // Transaction model add
+import { Transaction } from "@/models/Transaction";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import mongoose from "mongoose";
 
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = await getServerSession(authOptions);
-
-  // Admin check
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
-  }
-
-  const { status } = await req.json(); // 'approved' or 'rejected'
-  const { id } = await params;
-
-  // DB Session start (Atomic Transaction)
-  await connectDB();
-  const dbSession = await mongoose.startSession();
-  dbSession.startTransaction();
-
   try {
-    const submission = await Submission.findById(id);
-    console.log("Current Status:", submission.status);
-    // const submission = await Submission.findById(id)
-    //   .populate("jobId")
-    //   .session(dbSession);
+    const session = await getServerSession(authOptions);
 
-    // if (!submission) {
-    //   return NextResponse.json(
-    //     { message: "Submission not found" },
-    //     { status: 404 },
-    //   );
-    // }
+    if (!session || session.user.role !== "admin") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
 
-    // Pro-Tip: already approve/reject then next time are not update
-    if (submission.status !== "pending") {
+    const { status } = await req.json();
+    const { id } = await params;
+
+    await connectDB();
+
+    const submission = await Submission.findById(id).populate("jobId");
+    if (!submission) {
+      return NextResponse.json(
+        { message: "Submission not found" },
+        { status: 404 },
+      );
+    }
+
+    if (submission.status.toLowerCase() !== "pending") {
       return NextResponse.json(
         { message: "Already processed" },
         { status: 400 },
@@ -52,60 +41,62 @@ export async function PATCH(
     if (status === "approved") {
       const rewardAmount = submission.jobId.reward;
 
-      // 1. Increase Balance
-      await User.findByIdAndUpdate(
-        submission.userId,
-        { $inc: { balance: rewardAmount } },
-        { session: dbSession },
-      );
+      // 1. User-ke find korun tar current balance janar jonno
+      const user = await User.findById(submission.userId);
+      if (!user) {
+        return NextResponse.json(
+          { message: "User not found" },
+          { status: 404 },
+        );
+      }
 
-      // 2. Create Transaction Record (User earning history)
-      await Transaction.create(
-        [
-          {
-            userId: submission.userId,
-            amount: rewardAmount,
-            type: "credit",
-            category: "task_earning",
-            description: `Earned from task: ${submission.jobId.title}`,
-            status: "success",
-          },
-        ],
-        { session: dbSession },
-      );
+      // 2. New Balance calculate korun (balanceAfter field-er jonno)
+      const newBalance = user.balance + rewardAmount;
 
-      // 3. Update Job Count
+      // 3. User Balance Update
+      user.balance = newBalance;
+      await user.save();
+
+      // 4. Create Transaction
+      await Transaction.create({
+        userId: submission.userId,
+        amount: rewardAmount,
+        type: "income",
+        category: "task",
+        description: `Earned from task: ${submission.jobId.title}`,
+        balanceAfter: newBalance,
+      });
+
+      // 5. Update Job Count
       const updatedJob = await Job.findByIdAndUpdate(
         submission.jobId._id,
         { $inc: { completedCount: 1 } },
-        { new: true, session: dbSession },
+        { new: true },
       );
 
-      // 4. Check if Job is Full
-      if (updatedJob.completedCount >= updatedJob.totalVacancies) {
+      if (
+        updatedJob &&
+        updatedJob.completedCount >= updatedJob.totalVacancies
+      ) {
         updatedJob.status = "Full";
-        await updatedJob.save({ session: dbSession });
+        await updatedJob.save();
       }
     }
 
-    // 5. Update Submission Status
-    submission.status = status;
-    await submission.save({ session: dbSession });
-
-    await dbSession.commitTransaction();
-    dbSession.endSession();
+    // 6. Update Submission Status
+    const formattedStatus =
+      status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    submission.status = formattedStatus;
+    await submission.save();
 
     return NextResponse.json({
       success: true,
       message: `Submission ${status} successfully!`,
     });
   } catch (error) {
-    // Error
-    await dbSession.abortTransaction();
-    dbSession.endSession();
     console.error("Admin Update Error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: "Internal Server Error", error: error },
       { status: 500 },
     );
   }

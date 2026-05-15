@@ -9,7 +9,7 @@ import {
 } from "@/lib/validations/submission";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Camera, Send, Loader2 } from "lucide-react";
+import { Camera, Send, Loader2, Info } from "lucide-react";
 
 interface Props {
   jobId: string;
@@ -17,6 +17,7 @@ interface Props {
 
 export default function SubmissionForm({ jobId }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const router = useRouter();
 
   const {
@@ -26,17 +27,23 @@ export default function SubmissionForm({ jobId }: Props) {
     formState: { errors },
   } = useForm<SubmissionFormData>({
     resolver: zodResolver(SubmissionFormSchema),
-    defaultValues: {
-      jobId: jobId,
-    },
+    defaultValues: { jobId },
   });
+
+  // Handle Image Preview
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreview(URL.createObjectURL(file));
+    }
+  };
 
   const onSubmit = async (data: SubmissionFormData) => {
     setIsSubmitting(true);
-    const toastId = toast.loading("Uploading proof and submitting...");
+    const toastId = toast.loading("Uploading proof...");
 
     try {
-      // ১. ইমেজ আপলোড
+      // 1. Upload Image
       const formData = new FormData();
       formData.append("file", data.proofImage[0]);
 
@@ -46,37 +53,34 @@ export default function SubmissionForm({ jobId }: Props) {
       });
 
       const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.success)
+        throw new Error("Image upload failed");
 
-      if (!uploadRes.ok || !uploadData.success) {
-        throw new Error(uploadData.message || "Image upload failed");
-      }
+      toast.loading("Verifying submission...", { id: toastId });
 
-      // ২. ফাইনাল সাবমিশন (নিশ্চিত করুন ফিল্ডের নামগুলো আপনার ApiSubmissionSchema এর সাথে মিলছে)
+      // 2. Submit Data to API
       const response = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId: jobId, // সরাসরি প্রপস থেকে আসা jobId ব্যবহার করুন
+          jobId: jobId,
           proofText: data.proofText,
-          proofImage: uploadData.imageUrl, // আপনার লগ অনুযায়ী imageUrl
+          proofImage: uploadData.imageUrl,
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        toast.success("Work submitted successfully!", { id: toastId });
+        toast.success("Mission submitted successfully!", { id: toastId });
         reset();
-        router.push("/dashboard/tasks");
+        setPreview(null);
         router.refresh();
       } else {
-        // এপিআই থেকে আসা আসল এরর মেসেজটি দেখাবে
-        console.error("API Error Response:", result);
         toast.error(result.message || "Submission failed", { id: toastId });
       }
     } catch (error) {
-      console.error("Submission Error:", error);
-      toast.error("Something went wrong. Please try again!", { id: toastId });
+      toast.error("Something went wrong!", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -85,65 +89,88 @@ export default function SubmissionForm({ jobId }: Props) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="space-y-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm"
+      className="space-y-6 bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800"
     >
-      <div className="border-l-4 border-blue-600 pl-4">
-        <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">
-          Submit Your Work
-        </h3>
-        <p className="text-sm text-slate-500">
-          Provide accurate proof to get paid.
-        </p>
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+        <div className="w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+          <Info className="w-4 h-4 text-indigo-400" />
+        </div>
+        <h3 className="text-lg font-bold text-white italic">Submit Proof</h3>
       </div>
 
-      <input type="hidden" value={jobId} {...register("jobId")} />
+      <input type="hidden" {...register("jobId")} />
 
       {/* Proof Text Field */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-700">
-          Work Description / Proof Text
+      <div className="space-y-3">
+        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">
+          Proof Details (Text)
         </label>
         <textarea
           {...register("proofText")}
-          rows={4}
-          className={`w-full p-4 bg-slate-50 border rounded-xl outline-none transition ${
+          rows={3}
+          className={`w-full p-4 bg-slate-800/50 border rounded-2xl outline-none transition-all text-slate-200 placeholder:text-slate-600 ${
             errors.proofText
-              ? "border-red-500"
-              : "border-slate-200 focus:border-blue-600"
+              ? "border-rose-500/50"
+              : "border-slate-800 focus:border-indigo-500/50"
           }`}
-          placeholder="Enter your username, transaction ID, or details as requested..."
+          placeholder="Enter your username or transaction ID..."
         />
         {errors.proofText && (
-          <p className="text-xs text-red-500 font-medium">
+          <p className="text-[10px] text-rose-500 font-black uppercase tracking-tight italic">
             {errors.proofText.message}
           </p>
         )}
       </div>
 
       {/* Proof Image Upload */}
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-          <Camera className="w-4 h-4 text-blue-600" /> Upload Screenshot (Proof)
+      <div className="space-y-3">
+        <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+          Proof Image (Screenshot)
         </label>
-        <div className="relative border-2 border-dashed border-slate-200 rounded-xl p-4 hover:border-blue-400 transition bg-slate-50">
+
+        <div
+          className={`relative border-2 border-dashed rounded-2xl p-6 transition-all group flex flex-col items-center justify-center gap-2 ${
+            preview
+              ? "border-emerald-500/30 bg-emerald-500/5"
+              : "border-slate-800 hover:border-indigo-500/30 bg-slate-800/30"
+          }`}
+        >
           <input
             type="file"
             accept="image/*"
             {...register("proofImage")}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={handleImageChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
           />
-          <div className="text-center">
-            <p className="text-sm text-slate-600 font-medium">
-              Click to upload or drag and drop
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              PNG, JPG or WEBP (Max 5MB)
-            </p>
-          </div>
+
+          {preview ? (
+            <div className="text-center space-y-2">
+              <p className="text-[10px] font-black text-emerald-500 uppercase">
+                Image Selected ✓
+              </p>
+              <img
+                src={preview}
+                alt="preview"
+                className="w-20 h-20 object-cover rounded-lg border border-emerald-500/20 mx-auto"
+              />
+            </div>
+          ) : (
+            <>
+              <Camera className="w-8 h-8 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+              <div className="text-center">
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                  Click to upload screenshot
+                </p>
+                <p className="text-[9px] text-slate-600 mt-1 uppercase">
+                  Max Size: 5MB
+                </p>
+              </div>
+            </>
+          )}
         </div>
         {errors.proofImage && (
-          <p className="text-xs text-red-500 font-medium">
-            {errors.proofImage.message as string}
+          <p className="text-[10px] text-rose-500 font-black uppercase tracking-tight italic">
+            Image is required
           </p>
         )}
       </div>
@@ -152,17 +179,17 @@ export default function SubmissionForm({ jobId }: Props) {
       <button
         disabled={isSubmitting}
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
       >
         {isSubmitting ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            Processing Submission...
+            Processing...
           </>
         ) : (
           <>
-            <Send className="w-5 h-5" />
-            Submit Work for Review
+            Submit Mission
+            <Send className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </>
         )}
       </button>

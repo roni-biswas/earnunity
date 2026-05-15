@@ -13,37 +13,55 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate file type (Professional check)
-    if (!file.type.startsWith("image/")) {
+    // Limit 5MB
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { success: false, message: "Only images are allowed" },
+        { success: false, message: "File size too large (Max 5MB)" },
         { status: 400 },
       );
     }
 
+    // File type validation
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json(
+        { success: false, message: "Only image files are allowed" },
+        { status: 400 },
+      );
+    }
+
+    // Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to Cloudinary using stream
+    //  Cloudinary Upload
     const uploadResponse: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          { folder: "earnunity_proofs", resource_type: "auto" },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          },
-        )
-        .end(buffer);
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "earnunity_proofs",
+          resource_type: "image",
+          quality: "auto:good",
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary Error:", error);
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        },
+      );
+      uploadStream.end(buffer);
     });
 
+    // success response
     return NextResponse.json({
       success: true,
       imageUrl: uploadResponse.secure_url,
     });
   } catch (error) {
+    console.error("Internal Upload Error:", error);
     return NextResponse.json(
-      { success: false, message: "Upload failed" },
+      { success: false, message: error.message || "Upload failed" },
       { status: 500 },
     );
   }
