@@ -47,12 +47,12 @@ export default async function OverviewPage() {
     },
   ];
 
-  const referralLink = `earnunity.com/ref/${data?.stats.referralCode || "user"}`;
+  const referralLink = `ref-${data?.stats.referralCode || "user"}`;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 p-8 md:p-10 shadow-2xl">
+      <section className="relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/20 p-8 md:p-10 shadow-2xl">
         <div className="relative z-10">
           <h1 className="text-2xl md:text-3xl font-black text-white mb-2">
             Welcome Back!
@@ -82,7 +82,7 @@ export default async function OverviewPage() {
           >
             <div
               className={cn(
-                "w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4",
+                "w-12 h-12 rounded-xl bg-linear-to-br flex items-center justify-center mb-4",
                 item.color,
               )}
             >
@@ -150,7 +150,9 @@ export default async function OverviewPage() {
         </div>
 
         {/* Client Component */}
-        <ReferralCard link={referralLink} />
+        <div className="h-auto">
+          <ReferralCard link={referralLink} />
+        </div>
       </div>
     </div>
   );

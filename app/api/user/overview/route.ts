@@ -1,62 +1,122 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
 import { User } from "@/models/User";
-import { Submission } from "@/models/Submission";
 import { Job } from "@/models/Job";
+import { Submission } from "@/models/Submission";
+import { Referral } from "@/models/Referral";
 import { Withdraw } from "@/models/Withdraw";
 import { Transaction } from "@/models/Transaction";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     await connectDB();
 
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // 1. Authenticate user session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access" },
+        { status: 401 },
+      );
     }
 
-    // Parallel data fetching from multiple models
-    const [approvedTasks, availableTasks, withdrawals, recentTransactions] =
-      await Promise.all([
-        Submission.countDocuments({ userId: user._id, status: "approved" }),
-        Job.countDocuments({ status: "active" }),
-        Withdraw.aggregate([
-          { $match: { userId: user._id, status: "approved" } },
-          { $group: { _id: null, total: { $sum: "$amount" } } },
-        ]),
-        Transaction.find({ userId: user._id }).sort({ createdAt: -1 }).limit(5),
-      ]);
+    const userId = new mongoose.Types.ObjectId(session.user.id);
 
-    const data = {
-      stats: {
-        balance: user.balance || 0,
-        completedTasks: approvedTasks || 0,
-        referrals: user.referrals?.length || 0,
-        totalWithdraw: withdrawals[0]?.total || 0,
-        todayAvailableTasks: availableTasks || 0,
-        referralCode: user.referralCode || user._id.toString().slice(-6),
+    // 2. Fetch basic user data (Balance)
+    const user = await User.findById(userId).select("balance name email");
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 },
+      );
+    }
+
+    // 3. Aggregate Submission stats (Count Pending/Approved/Rejected)
+    const submissionStats = await Submission.aggregate([
+      { $match: { userId: userId } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+
+    // 4. Calculate Total Earned from Approved Submissions
+    // We populate jobId to get the reward amount of each approved task
+    const approvedSubmissions = await Submission.find({
+      userId: userId,
+      status: "Approved",
+    }).populate({
+      path: "jobId",
+      select: "reward",
+      model: Job,
+    });
+
+    const totalEarnedFromTasks = approvedSubmissions.reduce(
+      (acc, curr: any) => {
+        return acc + (curr.jobId?.reward || 0);
       },
-      activities: recentTransactions.map((tx) => ({
-        id: tx._id.toString(),
-        title: tx.description || "Transaction",
-        amount: tx.amount || 0,
-        status: tx.status,
-        date: new Date(tx.createdAt).toLocaleDateString("en-GB"),
-      })),
+      0,
+    );
+
+    // 5. Fetch Referral statistics
+    const totalReferrals = await Referral.countDocuments({
+      referrerId: userId,
+    });
+
+    // Calculate total earnings from referrals specifically
+    const referralEarnings = await Referral.aggregate([
+      { $match: { referrerId: userId, status: "active" } },
+      { $group: { _id: null, total: { $sum: "$rewardAmount" } } },
+    ]);
+
+    // 6. Fetch Withdrawal statistics (Completed vs Pending)
+    const withdrawStats = await Withdraw.aggregate([
+      { $match: { userId: userId } },
+      { $group: { _id: "$status", total: { $sum: "$amount" } } },
+    ]);
+
+    // 7. Map values for frontend consumption
+    const statsMap = {
+      pendingTasks:
+        submissionStats.find((s) => s._id === "Pending")?.count || 0,
+      completedTasks:
+        submissionStats.find((s) => s._id === "Approved")?.count || 0,
+      rejectedTasks:
+        submissionStats.find((s) => s._id === "Rejected")?.count || 0,
+      totalReferrals: totalReferrals,
+      referralIncome: referralEarnings[0]?.total || 0,
+      totalWithdrawn:
+        withdrawStats.find((w) => w._id === "completed")?.total || 0,
+      pendingWithdraw:
+        withdrawStats.find((w) => w._id === "pending")?.total || 0,
     };
 
-    return NextResponse.json(data);
+    // 8. Return combined dynamic data
+    return NextResponse.json({
+      success: true,
+      data: {
+        user: {
+          name: user.name,
+          balance: user.balance,
+        },
+        overview: {
+          currentBalance: user.balance,
+          totalEarned: totalEarnedFromTasks + (referralEarnings[0]?.total || 0),
+          completedTasks: statsMap.completedTasks,
+          pendingTasks: statsMap.pendingTasks,
+          referralCount: statsMap.totalReferrals,
+          withdrawnAmount: statsMap.totalWithdrawn,
+        },
+      },
+    });
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("OVERVIEW_API_ERROR:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      {
+        success: false,
+        message: "Internal Server Error",
+        error: error,
+      },
       { status: 500 },
     );
   }

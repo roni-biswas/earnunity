@@ -2,11 +2,19 @@
 
 import React from "react";
 import { Users } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ReferralCard({ link }: { link: string }) {
   const handleCopy = () => {
+    if (!link) return;
+
     navigator.clipboard.writeText(link);
-    alert("Referral link copied!");
+
+    // Professional Toast Notification
+    toast.success("Referral link copied!", {
+      description: "You can now share it with your friends.",
+      duration: 3000,
+    });
   };
 
   return (
