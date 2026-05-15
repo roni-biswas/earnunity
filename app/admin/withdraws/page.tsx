@@ -27,7 +27,7 @@ interface WithdrawRequest {
   userId: { name: string; email: string } | any;
   amount: number;
   method: string;
-  number: string;
+  accountNumber: string;
   status: "pending" | "completed" | "rejected";
   createdAt: string;
 }
@@ -123,7 +123,7 @@ export default function AdminWithdrawals() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-sm">
-                      <Phone size={12} /> {item.number}
+                      <Phone size={12} /> {item.accountNumber}
                     </div>
                   </TableCell>
                   <TableCell>
