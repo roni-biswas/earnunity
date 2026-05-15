@@ -16,7 +16,7 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main Content (Shifted on PC to make room for Sidebar) */}
-        <main className="flex-1 md:ml-64 p-4 md:p-8 pb-20 md:pb-8">
+        <main className="flex-1 md:pl-72 p-6 md:p-10 pb-24 md:pb-12 bg-[#020617] min-h-screen">
           {children}
         </main>
       </div>

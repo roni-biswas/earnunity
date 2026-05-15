@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
@@ -20,7 +19,6 @@ export function DashboardNavbar() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const pathname = usePathname();
 
   // Page scroll lock when mobile menu open
   useEffect(() => {
@@ -55,7 +53,7 @@ export function DashboardNavbar() {
 
   return (
     <>
-      <nav className="h-20 border-b border-slate-800 bg-[#020617]/95 backdrop-blur-md flex items-center justify-between px-6 md:px-10 sticky top-0 z-[60]">
+      <nav className="h-20 border-b border-slate-800 bg-[#020617]/95 backdrop-blur-md flex items-center justify-between px-6 md:px-10 sticky top-0 z-60">
         {/* --- Left Side: Mobile Toggle & Status Badge --- */}
         <div className="flex items-center gap-4">
           <button
@@ -112,7 +110,7 @@ export function DashboardNavbar() {
                     </span>
                   </div>
 
-                  <div className="max-h-[350px] overflow-y-auto no-scrollbar">
+                  <div className="max-h-87.5 overflow-y-auto no-scrollbar">
                     {notifications.map((n) => (
                       <div
                         key={n.id}
@@ -164,7 +162,7 @@ export function DashboardNavbar() {
             </div>
             <div className="relative">
               <div className="w-12 h-12 bg-slate-800 rounded-2xl border border-slate-700 p-0.5 shadow-xl transition-transform group-hover:scale-105">
-                <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-[14px] flex items-center justify-center">
+                <div className="w-full h-full bg-linear-to-tr from-indigo-500 to-violet-600 rounded-[14px] flex items-center justify-center">
                   <User className="text-white w-6 h-6" />
                 </div>
               </div>
@@ -178,7 +176,7 @@ export function DashboardNavbar() {
 
       {/* --- Mobile Sidebar Drawer --- */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] md:hidden overflow-hidden">
+        <div className="fixed inset-0 z-100 md:hidden overflow-hidden">
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setIsMobileMenuOpen(false)}
