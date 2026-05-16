@@ -8,10 +8,12 @@ import { getUniqueDeviceId } from "@/lib/utils/device";
 import { toast } from "sonner";
 import { User, Mail, Lock, Gift, ArrowRight } from "lucide-react";
 import z from "zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // Added useSearchParams
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Hook to get URL query params
+
   const {
     register,
     handleSubmit,
@@ -21,10 +23,21 @@ export default function RegisterPage() {
     resolver: zodResolver(RegisterSchema),
   });
 
+  // Handle URL Referral Code and Device ID on Mount
   useEffect(() => {
+    // 1. Get dynamic device ID
     const id = getUniqueDeviceId();
     setValue("deviceId", id);
-  }, [setValue]);
+
+    // 2. Extract "ref" from URL (e.g., ?ref=mithuna425)
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setValue("referralCode", refCode);
+      toast.success(`Referral code "${refCode}" applied!`, {
+        description: "Bonus milestone will sync upon active task completions.",
+      });
+    }
+  }, [setValue, searchParams]);
 
   const onSubmit = async (data: z.infer<typeof RegisterSchema>) => {
     try {
@@ -40,13 +53,16 @@ export default function RegisterPage() {
         toast.error(result.message);
       } else {
         toast.success("Account created successfully!");
-        // Redirect logic will go here
         router.push("/login");
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("REGISTRATION_SUBMIT_ERROR:", error);
       toast.error("Something went wrong. Please try again.");
     }
   };
+
+  // Check if a referral code came from the URL to lock the input field
+  const hasUrlRefCode = !!searchParams.get("ref");
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
@@ -134,16 +150,23 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Referral Code Field */}
+          {/* Referral Code Field (Dynamic Check Added) */}
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700">
-              Referral Code (Optional)
+              Referral Code {hasUrlRefCode ? "(Applied)" : "(Optional)"}
             </label>
             <div className="relative">
-              <Gift className="absolute left-3 top-3 text-emerald-500 w-4 h-4" />
+              <Gift
+                className={`absolute left-3 top-3 w-4 h-4 ${hasUrlRefCode ? "text-emerald-500" : "text-slate-400"}`}
+              />
               <input
                 {...register("referralCode")}
-                className="w-full pl-10 pr-4 py-2 bg-emerald-50 border border-emerald-100 rounded-lg outline-none"
+                readOnly={hasUrlRefCode} // Locks input if it comes from URL string
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg outline-none transition ${
+                  hasUrlRefCode
+                    ? "bg-emerald-50/60 border-emerald-200 text-emerald-700 font-bold cursor-not-allowed select-none"
+                    : "bg-slate-50 border-slate-200 focus:border-blue-500"
+                }`}
                 placeholder="CODE123"
               />
             </div>
@@ -162,6 +185,7 @@ export default function RegisterPage() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
         <div className="p-4 bg-slate-50 text-center border-t border-slate-100">
           <p className="text-slate-600 text-sm">
             Already have an account?{" "}

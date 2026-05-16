@@ -6,7 +6,7 @@ export const RegisterSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   deviceId: z.string().min(1, "Device ID is required for security"),
-  referralCode: z.string().optional(),
+  referralCode: z.string().optional().nullable(),
 });
 
 // Login Schema

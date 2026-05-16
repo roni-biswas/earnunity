@@ -47,7 +47,7 @@ export default async function OverviewPage() {
     },
   ];
 
-  const referralLink = `ref-${data?.stats.referralCode || "user"}`;
+  const referralLink = `${data?.stats.referralCode || "user"}`;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -151,7 +151,7 @@ export default async function OverviewPage() {
 
         {/* Client Component */}
         <div className="h-auto">
-          <ReferralCard link={referralLink} />
+          <ReferralCard referralCode={referralLink} />
         </div>
       </div>
     </div>

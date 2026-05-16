@@ -8,23 +8,39 @@ import mongoose from "mongoose";
 import { User } from "@/models/User";
 import { Submission } from "@/models/Submission";
 
-// Define return types for better type safety
-export interface DashboardData {
-  stats: {
-    balance: number;
-    completedTasks: number;
-    referrals: number;
-    totalWithdraw: number;
-    todayAvailableTasks: number;
-    referralCode: string;
-  };
-  activities: {
-    id: string;
-    title: string;
-    amount: number;
-    status: string;
-    date: string;
-  }[];
+interface DashboardStats {
+  balance: number;
+  completedTasks: number;
+  referrals: number;
+  totalWithdraw: number;
+  todayAvailableTasks: number;
+  referralCode: string;
+}
+
+interface DashboardActivity {
+  id: string;
+  title: string;
+  amount: number;
+  status: "Earned" | "Paid";
+  date: string;
+}
+
+interface DashboardData {
+  stats: DashboardStats;
+  activities: DashboardActivity[];
+}
+
+interface AggregateResult {
+  _id: null;
+  total: number;
+}
+
+interface DBTransaction {
+  _id: mongoose.Types.ObjectId;
+  description?: string;
+  amount?: number;
+  type?: "income" | "expense";
+  createdAt?: Date;
 }
 
 export async function getOverviewData(): Promise<DashboardData | null> {
@@ -39,40 +55,60 @@ export async function getOverviewData(): Promise<DashboardData | null> {
 
     const userId = new mongoose.Types.ObjectId(session.user.id);
 
-    // 1. Fetch User details safely
-    const user = await User.findById(userId).select("balance name _id").lean();
+    const user = await User.findById(userId).select(
+      "balance name referralCode _id",
+    );
 
-    // 2. Count Completed Tasks
-    const completedTasks = await Submission.countDocuments({
-      userId,
-      status: "Approved",
-    });
+    if (!user) return null;
 
-    // 3. Calculate Total Withdraw (Aggregate returns array)
-    const withdrawData = await Withdraw.aggregate([
-      { $match: { userId, status: "completed" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+    let finalReferralCode = user.referralCode || "";
+
+    if (!user.referralCode) {
+      const firstName = user.name
+        ? user.name
+            .split(" ")[0]
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "")
+        : "user";
+      const userSuffix = user._id.toString().slice(-4);
+      finalReferralCode = `${firstName}${userSuffix}`;
+
+      await User.updateOne(
+        { _id: userId },
+        { $set: { referralCode: finalReferralCode } },
+      );
+    }
+
+    const [
+      completedTasks,
+      withdrawData,
+      referralData,
+      availableTasks,
+      recentTransactions,
+    ] = await Promise.all([
+      Submission.countDocuments({
+        userId,
+        status: "Approved",
+      }),
+      Withdraw.aggregate<AggregateResult>([
+        { $match: { userId, status: "completed" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Transaction.aggregate<AggregateResult>([
+        { $match: { userId, category: "referral" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      Job.countDocuments({
+        status: "Active",
+        $expr: { $lt: ["$completedCount", "$totalVacancies"] },
+      }),
+      Transaction.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean<DBTransaction[]>(),
     ]);
 
-    // 4. Calculate Referral Earnings
-    const referralData = await Transaction.aggregate([
-      { $match: { userId, category: "referral" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-
-    // 5. Available Tasks count
-    const availableTasks = await Job.countDocuments({
-      status: "Active",
-      $expr: { $lt: ["$completedCount", "$totalVacancies"] },
-    });
-
-    // 6. Fetch Recent Activities with proper Type
-    const recentTransactions = await Transaction.find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean();
-
-    const activities = recentTransactions.map((tx) => ({
+    const activities: DashboardActivity[] = recentTransactions.map((tx) => ({
       id: tx._id.toString(),
       title: tx.description || "Activity",
       amount: tx.amount || 0,
@@ -85,21 +121,14 @@ export async function getOverviewData(): Promise<DashboardData | null> {
         : "N/A",
     }));
 
-    // 7. Safe Referral Code generation (Split error fixed)
-    const firstName = user?.name
-      ? user.name.split(" ")[0].toLowerCase()
-      : "user";
-    const userSuffix = user?._id ? user._id.toString().slice(-4) : "123";
-    const GenReferralCode = `${firstName}${userSuffix}`;
-
     return {
       stats: {
-        balance: user?.balance || 0,
+        balance: user.balance || 0,
         completedTasks,
         referrals: referralData[0]?.total || 0,
         totalWithdraw: withdrawData[0]?.total || 0,
         todayAvailableTasks: availableTasks,
-        referralCode: GenReferralCode,
+        referralCode: finalReferralCode,
       },
       activities,
     };

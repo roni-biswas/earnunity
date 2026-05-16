@@ -1,7 +1,17 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-// Mongoose Schema
-const ReferralSchema = new Schema(
+export interface IReferral extends Document {
+  referrerId: mongoose.Types.ObjectId;
+  referredUserId: mongoose.Types.ObjectId;
+  rewardAmount: number;
+  instantBonusPaid: boolean;
+  taskBonusPaid: boolean;
+  status: "active" | "inactive";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ReferralSchema = new Schema<IReferral>(
   {
     referrerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -15,6 +25,8 @@ const ReferralSchema = new Schema(
       unique: true,
     },
     rewardAmount: { type: Number, default: 0 },
+    instantBonusPaid: { type: Boolean, default: false },
+    taskBonusPaid: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["active", "inactive"],
@@ -24,5 +36,6 @@ const ReferralSchema = new Schema(
   { timestamps: true },
 );
 
-export const Referral =
-  mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
+export const Referral: Model<IReferral> =
+  mongoose.models.Referral ||
+  mongoose.model<IReferral>("Referral", ReferralSchema);

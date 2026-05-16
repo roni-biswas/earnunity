@@ -1,15 +1,45 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/lib/db";
 import { User } from "@/models/User";
 import bcrypt from "bcryptjs";
 
+declare module "next-auth" {
+  interface User {
+    id: string;
+    role: string;
+  }
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role: string;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
-      credentials: {},
-      async authorize(credentials: any) {
+      credentials: {
+        email: { type: "text" },
+        password: { type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Missing email or password");
+        }
+
         const { email, password } = credentials;
 
         try {
@@ -36,8 +66,9 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             role: user.role,
           };
-        } catch (error: any) {
-          throw new Error(error.message);
+        } catch (error: unknown) {
+          const err = error as Error;
+          throw new Error(err.message);
         }
       },
     }),
@@ -46,14 +77,14 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session.user) {
         session.user.role = token.role;
         session.user.id = token.id;

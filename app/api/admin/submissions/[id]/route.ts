@@ -4,13 +4,15 @@ import { Submission } from "@/models/Submission";
 import { User } from "@/models/User";
 import { Job } from "@/models/Job";
 import { Transaction } from "@/models/Transaction";
+import { Referral } from "@/models/Referral";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function PATCH(req: Request, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -41,7 +43,6 @@ export async function PATCH(
     if (status === "approved") {
       const rewardAmount = submission.jobId.reward;
 
-      // 1. User-ke find korun tar current balance janar jonno
       const user = await User.findById(submission.userId);
       if (!user) {
         return NextResponse.json(
@@ -50,14 +51,10 @@ export async function PATCH(
         );
       }
 
-      // 2. New Balance calculate korun (balanceAfter field-er jonno)
       const newBalance = user.balance + rewardAmount;
-
-      // 3. User Balance Update
       user.balance = newBalance;
       await user.save();
 
-      // 4. Create Transaction
       await Transaction.create({
         userId: submission.userId,
         amount: rewardAmount,
@@ -67,7 +64,41 @@ export async function PATCH(
         balanceAfter: newBalance,
       });
 
-      // 5. Update Job Count
+      const referralTrack = await Referral.findOne({
+        referredUserId: submission.userId,
+        taskBonusPaid: false,
+      });
+
+      if (referralTrack) {
+        const TASK_COMPLETION_BONUS = 15;
+        const referrerUser = await User.findById(referralTrack.referrerId);
+
+        if (referrerUser) {
+          const referrerNewBalance =
+            referrerUser.balance + TASK_COMPLETION_BONUS;
+
+          referrerUser.balance = referrerNewBalance;
+          await referrerUser.save();
+
+          await Referral.updateOne(
+            { _id: referralTrack._id },
+            {
+              $inc: { rewardAmount: TASK_COMPLETION_BONUS },
+              $set: { taskBonusPaid: true, status: "active" },
+            },
+          );
+
+          await Transaction.create({
+            userId: referralTrack.referrerId,
+            amount: TASK_COMPLETION_BONUS,
+            type: "income",
+            category: "referral",
+            description: `Referral milestone bonus from: ${user.name}`,
+            balanceAfter: referrerNewBalance,
+          });
+        }
+      }
+
       const updatedJob = await Job.findByIdAndUpdate(
         submission.jobId._id,
         { $inc: { completedCount: 1 } },
@@ -83,7 +114,6 @@ export async function PATCH(
       }
     }
 
-    // 6. Update Submission Status
     const formattedStatus =
       status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     submission.status = formattedStatus;
@@ -93,10 +123,11 @@ export async function PATCH(
       success: true,
       message: `Submission ${status} successfully!`,
     });
-  } catch (error) {
-    console.error("Admin Update Error:", error);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Admin Update Error:", err);
     return NextResponse.json(
-      { message: "Internal Server Error", error: error },
+      { message: "Internal Server Error", error: err.message },
       { status: 500 },
     );
   }
