@@ -17,7 +17,8 @@ import {
   Gem,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
-import { cn } from "@/lib/utils"; // shadcn utility function
+import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const menuItems = [
   {
@@ -57,13 +58,28 @@ export function DashboardSidebar() {
         <div className="absolute -right-2 -top-2 opacity-10 group-hover:rotate-12 transition-transform duration-500">
           <Gem className="w-12 h-12 text-indigo-500" />
         </div>
+
         <div className="flex items-center gap-3 relative z-10">
-          <div className="w-12 h-12 bg-linear-to-tr from-indigo-600 to-violet-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0">
-            <UserCircle className="text-white w-7 h-7" />
+          {/* Dynamic Profile Avatar Frame */}
+          <div className="w-12 h-12 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 relative">
+            {session?.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt="User Avatar"
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="w-full h-full bg-linear-to-tr from-indigo-600 to-violet-700 flex items-center justify-center">
+                <UserCircle className="text-white w-7 h-7" />
+              </div>
+            )}
           </div>
+
           <div className="overflow-hidden">
             <p className="text-[13px] font-black text-white truncate uppercase tracking-tight">
-              {session?.user?.name || "Roni Biswas"}
+              {session?.user?.name || "User"}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -89,7 +105,7 @@ export function DashboardSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={`Navigate to ${item.label}`}
+                  title={`Maps to ${item.label}`}
                   className={cn(
                     "flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden whitespace-nowrap",
                     isActive
@@ -152,9 +168,14 @@ export function DashboardSidebar() {
 
             <Link
               href="/dashboard/settings"
-              className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/40 group whitespace-nowrap"
+              className={cn(
+                "flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all group whitespace-nowrap",
+                pathname === "/dashboard/settings"
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40",
+              )}
             >
-              <Settings className="w-4.5 h-4.5 group-hover:spin-slow" />
+              <Settings className="w-4.5 h-4.5 group-hover:animate-spin" />
               <span className="font-bold text-[13px]">Account Settings</span>
             </Link>
           </div>
@@ -170,7 +191,7 @@ export function DashboardSidebar() {
           className="flex items-center gap-3.5 px-5 py-4 w-full text-rose-500 bg-rose-500/5 hover:bg-rose-500/10 rounded-2xl transition-all font-black text-[13px] group border border-rose-500/10"
         >
           <LogOut className="w-4.5 h-4.5 group-hover:-translate-x-1 transition-transform" />
-          <span className="uppercase tracking-tighter">Terminate Session</span>
+          <span className="uppercase tracking-tighter">Logout</span>
         </button>
       </div>
     </div>

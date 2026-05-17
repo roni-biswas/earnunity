@@ -14,13 +14,14 @@ import {
 } from "lucide-react";
 import { DashboardSidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export function DashboardNavbar() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // Page scroll lock when mobile menu open
+  /* Page scroll lock when mobile menu open */
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.classList.add("menu-open");
@@ -29,7 +30,7 @@ export function DashboardNavbar() {
     }
   }, [isMobileMenuOpen]);
 
-  // dummy notification data
+  /* Dummy notification data */
   const notifications = [
     {
       id: 1,
@@ -103,7 +104,7 @@ export function DashboardNavbar() {
                 <div className="absolute right-0 mt-4 w-80 bg-[#0b0f1a] border border-slate-800 rounded-[1.5rem] shadow-2xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                   <div className="p-5 border-b border-slate-800 bg-slate-900/30 flex justify-between items-center">
                     <h3 className="text-sm font-bold text-white uppercase italic">
-                      Alerts Center
+                      Alert Center
                     </h3>
                     <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black">
                       NEW
@@ -147,11 +148,11 @@ export function DashboardNavbar() {
             )}
           </div>
 
-          {/* User Profile with Name */}
+          {/* User Profile with Dynamic Name & Cloudinary Image Hook */}
           <div className="flex items-center gap-3 pl-6 border-l border-slate-800 group cursor-pointer">
             <div className="text-right hidden sm:block transition-all group-hover:pr-1">
               <p className="text-xs font-black text-white uppercase tracking-tight italic">
-                {session?.user?.name || "Roni Biswas"}
+                {session?.user?.name || "User"}
               </p>
               <div className="flex items-center justify-end gap-1.5">
                 <span className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -160,11 +161,23 @@ export function DashboardNavbar() {
                 </p>
               </div>
             </div>
+
             <div className="relative">
-              <div className="w-12 h-12 bg-slate-800 rounded-2xl border border-slate-700 p-0.5 shadow-xl transition-transform group-hover:scale-105">
-                <div className="w-full h-full bg-linear-to-tr from-indigo-500 to-violet-600 rounded-[14px] flex items-center justify-center">
-                  <User className="text-white w-6 h-6" />
-                </div>
+              <div className="w-12 h-12 bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl transition-transform group-hover:scale-105 flex items-center justify-center">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="User Avatar"
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-full bg-linear-to-tr from-indigo-500 to-violet-600 flex items-center justify-center">
+                    <User className="text-white w-6 h-6" />
+                  </div>
+                )}
               </div>
               <div className="absolute -bottom-1 -right-1 bg-indigo-600 rounded-full p-0.5 border-2 border-[#020617] md:hidden">
                 <ChevronDown className="w-3 h-3 text-white" />

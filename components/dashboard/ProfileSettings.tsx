@@ -7,6 +7,8 @@ import { profileSchema, ProfileFormValues } from "@/types/settings";
 import { toast } from "sonner";
 import { User, Camera, Loader2 } from "lucide-react";
 import Image from "next/image";
+/* Import useSession hook to handle layout reactivity */
+import { useSession } from "next-auth/react";
 
 interface ProfileSettingsProps {
   initialName: string;
@@ -17,6 +19,8 @@ export default function ProfileSettings({
   initialName,
   initialImage,
 }: ProfileSettingsProps) {
+  /* Destructure the update function from next-auth session */
+  const { update } = useSession();
   const [uploading, setUploading] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [preview, setPreview] = useState<string>(initialImage || "");
@@ -25,6 +29,7 @@ export default function ProfileSettings({
     register,
     handleSubmit,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -62,6 +67,12 @@ export default function ProfileSettings({
       setPreview(result.imageUrl);
       setValue("image", result.imageUrl);
 
+      /* CRITICAL: Instantly update client session for the navbar/sidebar image */
+      await update({
+        name: getValues("name"),
+        image: result.imageUrl,
+      });
+
       toast.success("Profile picture updated successfully!");
     } catch (error: unknown) {
       const err = error as Error;
@@ -83,6 +94,12 @@ export default function ProfileSettings({
 
       const result = await res.json();
       if (!result.success) throw new Error(result.message);
+
+      /* CRITICAL: Instantly update client session for the navbar/sidebar name */
+      await update({
+        name: data.name,
+        image: data.image,
+      });
 
       toast.success("Profile information saved successfully");
     } catch (error: unknown) {

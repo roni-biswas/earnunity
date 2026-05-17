@@ -65,6 +65,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             email: user.email,
             role: user.role,
+            image: user.image,
           };
         } catch (error: unknown) {
           const err = error as Error;
@@ -77,17 +78,29 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.name = user.name;
+        token.picture = user.image;
       }
+
+      if (trigger === "update" && session) {
+        /* Type cast session to access properties safely */
+        const updateSession = session as { name?: string; image?: string };
+        if (updateSession.name) token.name = updateSession.name;
+        if (updateSession.image) token.picture = updateSession.image;
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.role = token.role;
         session.user.id = token.id;
+        session.user.name = token.name;
+        session.user.image = token.picture;
       }
       return session;
     },
