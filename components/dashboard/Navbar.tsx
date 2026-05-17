@@ -11,15 +11,27 @@ import {
   CheckCircle2,
   Clock,
   ChevronDown,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { DashboardSidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useSocket, INotificationPayload } from "@/providers/SocketProvider";
 
 export function DashboardNavbar() {
-  const { data: session } = useSession();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const { data: session } = { data: useSession().data };
+  const { socket } = useSocket();
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+
+  // Real-time notification states
+  const [notifications, setNotifications] = useState<INotificationPayload[]>(
+    [],
+  );
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
 
   /* Page scroll lock when mobile menu open */
   useEffect(() => {
@@ -30,27 +42,58 @@ export function DashboardNavbar() {
     }
   }, [isMobileMenuOpen]);
 
-  /* Dummy notification data */
-  const notifications = [
-    {
-      id: 1,
-      title: "Task Approved",
-      msg: "Your photo edit task was approved!",
-      time: "2m ago",
-    },
-    {
-      id: 2,
-      title: "New Referral",
-      msg: "A friend joined using your link.",
-      time: "1h ago",
-    },
-    {
-      id: 3,
-      title: "Payment Sent",
-      msg: "Your withdrawal is processing.",
-      time: "3h ago",
-    },
-  ];
+  /* Fetch notification history from MongoDB instance on component layout setup */
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.notifications);
+          const unread = data.notifications.filter(
+            (n: INotificationPayload) => !n.isRead,
+          ).length;
+          setUnreadCount(unread);
+        }
+      } catch (error) {
+        console.error("Failed to sync client notifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
+  /* Attach asynchronous event boundary to catch incoming events from global io context */
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("new_notification", (newNotification: INotificationPayload) => {
+      setNotifications((prev) => [newNotification, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    return () => {
+      socket.off("new_notification");
+    };
+  }, [socket]);
+
+  /* Push batch update parameters to database endpoint via safe async handlers */
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+
+    try {
+      // Optimistic UI updates to avoid asynchronous lag on client click actions
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
+      await fetch("/api/notifications/mark-read", { method: "PATCH" });
+    } catch (error) {
+      console.error("Mass status update operation failure:", error);
+    }
+  };
 
   return (
     <>
@@ -66,7 +109,7 @@ export function DashboardNavbar() {
             <Menu className="w-6 h-6" />
           </button>
 
-          {/* Logo Replacement: Workspace Badge */}
+          {/* Workspace Badge */}
           <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl">
             <LayoutGrid className="w-4 h-4 text-indigo-500" />
             <span className="text-xs font-black text-indigo-400 uppercase tracking-widest">
@@ -91,7 +134,11 @@ export function DashboardNavbar() {
               )}
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-3 right-3.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-[#020617]"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-2.5 right-2.5 w-4 h-4 bg-rose-500 rounded-full border-2 border-[#020617] text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             {/* Notification Dropdown Panel */}
@@ -106,38 +153,80 @@ export function DashboardNavbar() {
                     <h3 className="text-sm font-bold text-white uppercase italic">
                       Alert Center
                     </h3>
-                    <span className="text-[9px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-black">
-                      NEW
-                    </span>
+                    {unreadCount > 0 ? (
+                      <button
+                        onClick={handleMarkAllAsRead}
+                        className="text-[10px] text-indigo-400 font-black hover:text-indigo-300 flex items-center gap-1.5 transition-colors"
+                      >
+                        <Check className="w-3 h-3" /> Mark all read
+                      </button>
+                    ) : (
+                      <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-black">
+                        SYNCED
+                      </span>
+                    )}
                   </div>
 
+                  {/* Dynamic Notification Wrapper */}
                   <div className="max-h-87.5 overflow-y-auto no-scrollbar">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className="p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-all cursor-pointer group"
-                      >
-                        <div className="flex gap-4">
-                          <div className="p-2 bg-indigo-500/10 rounded-lg h-fit group-hover:bg-indigo-600 transition-colors">
-                            <CheckCircle2 className="w-4 h-4 text-indigo-500 group-hover:text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-[13px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                              {n.title}
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              {n.msg}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-2 text-slate-600">
-                              <Clock className="w-3 h-3" />
-                              <span className="text-[9px] font-bold uppercase tracking-tighter">
-                                {n.time}
-                              </span>
+                    {loading ? (
+                      <div className="flex justify-center items-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-slate-500 font-medium">
+                          No updates available
+                        </p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n._id}
+                          className={cn(
+                            "p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-all cursor-pointer group",
+                            !n.isRead && "bg-indigo-600/5",
+                          )}
+                        >
+                          <div className="flex gap-4">
+                            <div
+                              className={cn(
+                                "p-2 rounded-lg h-fit transition-colors border",
+                                n.isRead
+                                  ? "bg-slate-900 border-slate-800 text-slate-500"
+                                  : "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white",
+                              )}
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                              <p
+                                className={cn(
+                                  "text-[13px] font-bold transition-colors",
+                                  n.isRead
+                                    ? "text-slate-400 group-hover:text-slate-300"
+                                    : "text-slate-200 group-hover:text-indigo-400",
+                                )}
+                              >
+                                {n.title}
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                {n.message}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-2 text-slate-600">
+                                <Clock className="w-3 h-3" />
+                                <span className="text-[9px] font-bold uppercase tracking-tighter">
+                                  {new Date(n.createdAt).toLocaleTimeString(
+                                    [],
+                                    { hour: "2-digit", minute: "2-digit" },
+                                  )}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
 
                   <button className="w-full py-4 text-[11px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest border-t border-slate-800">
@@ -148,7 +237,7 @@ export function DashboardNavbar() {
             )}
           </div>
 
-          {/* User Profile with Dynamic Name & Cloudinary Image Hook */}
+          {/* User Profile Info */}
           <div className="flex items-center gap-3 pl-6 border-l border-slate-800 group cursor-pointer">
             <div className="text-right hidden sm:block transition-all group-hover:pr-1">
               <p className="text-xs font-black text-white uppercase tracking-tight italic">

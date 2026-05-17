@@ -24,15 +24,15 @@ app.prepare().then(() => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`⚡ User Connected: ${socket.id}`);
+    console.log(`User Connected: ${socket.id}`);
 
     socket.on("join_room", (userId: string) => {
       socket.join(userId);
-      console.log(`🚪 User joined room: ${userId}`);
+      console.log(`User joined room: ${userId}`);
     });
 
     socket.on("disconnect", () => {
-      console.log(`❌ User Disconnected: ${socket.id}`);
+      console.log(`User Disconnected: ${socket.id}`);
     });
   });
 
@@ -40,6 +40,6 @@ app.prepare().then(() => {
   (global as any).io = io;
 
   httpServer.listen(port, () => {
-    console.log(`> 🚀 EarnUnity Server ready on http://${hostname}:${port}`);
+    console.log(`EarnUnity Server ready on http://${hostname}:${port}`);
   });
 });
