@@ -18,6 +18,7 @@ import { DashboardSidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSocket, INotificationPayload } from "@/providers/SocketProvider";
+import { useRouter } from "next/navigation";
 
 export function DashboardNavbar() {
   const { data: session } = { data: useSession().data };
@@ -32,6 +33,7 @@ export function DashboardNavbar() {
   );
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const router = useRouter();
 
   /* Page scroll lock when mobile menu open */
   useEffect(() => {
@@ -183,6 +185,47 @@ export function DashboardNavbar() {
                       notifications.map((n) => (
                         <div
                           key={n._id}
+                          onClick={async () => {
+                            // ১. ড্রপডাউন র‍্যাপারটি সাথে সাথে বন্ধ করে দেওয়া হলো
+                            setShowNotifications(false);
+
+                            // ২. যদি নোটিফিকেশনটি আনরিড (false) থাকে, ব্যাকএন্ডে সিঙ্গেল আপডেট ফায়ার হবে
+                            if (!n.isRead) {
+                              try {
+                                const res = await fetch("/api/notifications", {
+                                  method: "PATCH",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({ id: n._id }),
+                                });
+
+                                if (res.ok) {
+                                  // UI লোকাল স্টেট আপডেট ও কাউন্টার মাইনাস ১ করা
+                                  setNotifications((prev) =>
+                                    prev.map((item) =>
+                                      item._id === n._id
+                                        ? { ...item, isRead: true }
+                                        : item,
+                                    ),
+                                  );
+                                  setUnreadCount((prev) =>
+                                    Math.max(0, prev - 1),
+                                  );
+                                }
+                              } catch (err) {
+                                console.error(
+                                  "Single notification mark read error:",
+                                  err,
+                                );
+                              }
+                            }
+
+                            // ৩. নির্দিষ্ট পাথে রিডাইরেক্ট করা
+                            if (n.path) {
+                              router.push(n.path);
+                            }
+                          }}
                           className={cn(
                             "p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-all cursor-pointer group",
                             !n.isRead && "bg-indigo-600/5",

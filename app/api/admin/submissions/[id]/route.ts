@@ -40,7 +40,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       );
     }
 
-    if (status === "approved") {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const isApproved = status === "approved";
+
+    if (isApproved) {
       const rewardAmount = submission.jobId.reward;
 
       const user = await User.findById(submission.userId);
@@ -96,6 +99,22 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             description: `Referral milestone bonus from: ${user.name}`,
             balanceAfter: referrerNewBalance,
           });
+
+          /* 1. Send live notification to the Referrer */
+          try {
+            await fetch(`${siteUrl}/api/notifications`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: referralTrack.referrerId,
+                title: "Referral Bonus Received! 👥",
+                message: `You earned $${TASK_COMPLETION_BONUS} milestone bonus because ${user.name} completed a task.`,
+                type: "referral",
+              }),
+            });
+          } catch (notifErr) {
+            console.error("Failed to send referral notification:", notifErr);
+          }
         }
       }
 
@@ -114,10 +133,32 @@ export async function PATCH(req: Request, { params }: RouteParams) {
       }
     }
 
+    // Update Submission Status in DB
     const formattedStatus =
       status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     submission.status = formattedStatus;
     await submission.save();
+
+    const dynamicPath = `/dashboard/tasks/${submission.jobId._id}`;
+
+    /* 2. Send live notification to the Worker (Task Submitter) */
+    try {
+      await fetch(`${siteUrl}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: submission.userId,
+          title: isApproved ? "Task Approved! 🎉" : "Task Rejected ❌",
+          message: isApproved
+            ? `Your submission for '${submission.jobId.title}' has been approved. $${submission.jobId.reward} added to your wallet.`
+            : `Your submission for '${submission.jobId.title}' was rejected by admin. Please check the requirements.`,
+          type: isApproved ? "task_approved" : "task_rejected",
+          path: dynamicPath,
+        }),
+      });
+    } catch (notifErr) {
+      console.error("Failed to send task worker notification:", notifErr);
+    }
 
     return NextResponse.json({
       success: true,

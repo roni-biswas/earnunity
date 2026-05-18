@@ -9,6 +9,7 @@ export interface INotification extends Document {
   message: string;
   type: "task_approved" | "task_rejected" | "referral" | "payment" | "system";
   isRead: boolean;
+  path: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +41,7 @@ const NotificationSchema = new Schema<INotification>(
       type: Boolean,
       default: false,
     },
+    path: { type: String },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt fields

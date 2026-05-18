@@ -18,6 +18,7 @@ export interface INotificationPayload {
   message: string;
   type: NotificationType;
   isRead: boolean;
+  path: string;
   createdAt: string;
   updatedAt: string;
 }
