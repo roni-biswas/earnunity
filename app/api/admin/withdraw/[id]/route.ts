@@ -67,6 +67,46 @@ export async function PATCH(
     withdrawReq.statusUpdateDate = new Date(); // Optional: track when it was updated
     await withdrawReq.save();
 
+    // ===================================================================
+    // 6. NEW: Trigger Live Notification to the User (Approve/Reject)
+    // ===================================================================
+    try {
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      // Determine dynamic visual markers and titles based on admin action
+      const isApproved = status === "completed"; // Matching your frontend terminology
+      const notifIcon = isApproved ? "✅" : "❌";
+      const notifTitle = isApproved
+        ? "Withdrawal Approved! 💰"
+        : "Withdrawal Rejected! ❌";
+
+      const notifMessage = isApproved
+        ? `Great news! Your withdrawal request of ৳${withdrawReq.amount} via ${withdrawReq.method} has been approved.`
+        : `Your withdrawal request of ৳${withdrawReq.amount} via ${withdrawReq.method} was rejected. The amount has been refunded to your wallet.`;
+
+      /**
+       * Making an internal REST request back to our global notification engine.
+       * Target changes from ADMIN_ID directly to the unique user ID bound within the withdrawal record.
+       */
+      await fetch(`${siteUrl}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: withdrawReq.userId.toString(), // Send notification directly to the specific user
+          title: notifTitle,
+          message: notifMessage,
+          type: "system",
+          path: "/dashboard/withdraw", // Redirects user smoothly to their withdraw panel context
+        }),
+      });
+    } catch (notifErr) {
+      console.error(
+        "Failed to route withdrawal status update notification to user:",
+        notifErr,
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: `Withdrawal ${status} successfully`,
