@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   try {
+    await connectDB();
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -17,8 +18,6 @@ export async function GET() {
         { status: 401 },
       );
     }
-
-    await connectDB();
 
     const notifications = await Notification.find({ userId: session.user.id })
       .sort({ createdAt: -1 })

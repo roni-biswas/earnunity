@@ -8,12 +8,17 @@ import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { WithdrawZodSchema } from "@/lib/validations/withdraw";
 
+/**
+ * PATH: /api/withdraw/request
+ * POST: Handles secure user withdrawal requests and dispatches real-time admin flashes
+ */
 export async function POST(req: Request) {
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    // Guard clause to block unauthorized requests
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
@@ -22,13 +27,13 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    // 1. Validate incoming data using Zod
+    // 1. Validate incoming payload metadata through Zod validation core
     const validatedData = WithdrawZodSchema.parse({
       ...body,
       userId: session.user.id,
     });
 
-    // 2. Check User Balance
+    // 2. Query MongoDB database context to verify active user wallet balance
     const user = await User.findById(session.user.id);
     if (!user || user.balance < validatedData.amount) {
       return NextResponse.json(
@@ -37,14 +42,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Create Withdraw Request
+    // 3. Persist the official payout log document inside Withdraw collection
     const newWithdraw = await Withdraw.create(validatedData);
 
-    // 4. Deduct Balance from User
+    // 4. Atomically adjust the wallet state balance flags
     user.balance -= validatedData.amount;
     await user.save();
 
-    // 5. Create a Transaction entry for history
+    // 5. Append transaction ledger documents to archive active history states
     await Transaction.create({
       userId: session.user.id,
       amount: validatedData.amount,

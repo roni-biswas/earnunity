@@ -55,9 +55,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter(); // router initiate holo
-  const { data: session } = useSession(); // Accessing current auth session data
+  const router = useRouter();
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   // --- Real-time Notification States ---
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -95,6 +97,7 @@ export default function AdminLayout({
     });
 
     socket.on("connect", () => {
+      // Joining only the specific authenticated admin user's room safely
       socket.emit("join_room", session.user.id);
     });
 
@@ -115,7 +118,9 @@ export default function AdminLayout({
   }, [session]);
 
   // 3. Mark all notifications as read inside the database layout thread
-  const markAllAsRead = async () => {
+  const handleBellClick = async () => {
+    setIsPopoverOpen(!isPopoverOpen);
+
     if (unreadCount === 0) return;
     try {
       const res = await fetch("/api/notifications/mark-read", {
@@ -171,12 +176,12 @@ export default function AdminLayout({
           {/* Right side tools */}
           <div className="flex items-center gap-3">
             {/* --- Live Popover Notification Center --- */}
-            <Popover>
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={markAllAsRead}
+                  onClick={handleBellClick}
                   className="rounded-full relative border-gray-200 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   <Bell size={18} />
@@ -210,6 +215,7 @@ export default function AdminLayout({
                       <div
                         key={notif._id}
                         onClick={async () => {
+                          setIsPopoverOpen(false);
                           if (!notif.isRead) {
                             try {
                               const res = await fetch("/api/notifications", {
@@ -235,7 +241,8 @@ export default function AdminLayout({
                               );
                             }
                           }
-                          // notification path
+
+                          // ৩. নির্দিষ্ট পাথে রিডাইরেক্ট করা
                           if (notif.path) {
                             router.push(notif.path);
                           }
@@ -246,7 +253,9 @@ export default function AdminLayout({
                       >
                         <div className="flex items-start justify-between gap-2">
                           <p
-                            className={`text-xs font-semibold ${!notif.isRead ? "text-blue-900" : "text-gray-700"}`}
+                            className={`text-xs font-semibold ${
+                              !notif.isRead ? "text-blue-900" : "text-gray-700"
+                            }`}
                           >
                             {notif.title}
                           </p>

@@ -36,7 +36,7 @@ export default function ReferralCard({ referralCode }: ReferralCardProps) {
   };
 
   return (
-    <div className="relative overflow-hidden bg-linear-to-br from-indigo-600 via-indigo-700 to-slate-900 rounded-[2.5rem] p-8 shadow-2xl text-white h-full flex flex-col justify-between group">
+    <div className="relative overflow-hidden bg-linear-to-br from-indigo-600 via-indigo-700 to-slate-900 rounded-[2.5rem] p-8 shadow-2xl text-white h-auto flex flex-col justify-between group">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 -mt-12 -mr-12 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
       <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl" />

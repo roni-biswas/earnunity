@@ -74,6 +74,42 @@ export async function POST(req: Request) {
       balanceAfter: user.balance,
     });
 
+    // ===================================================================
+    // 7. NEW: Trigger Live Notification to Admin (Matches Submission Flow)
+    // ===================================================================
+    try {
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const adminUserId = process.env.ADMIN_ID;
+
+      if (adminUserId) {
+        /**
+         * Making a POST request to your global notification endpoint.
+         * This mirrors the exact same successful flow as your Task Submissions.
+         */
+        await fetch(`${siteUrl}/api/notifications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: adminUserId,
+            title: "New Withdrawal Request 💰",
+            message: `${session.user.name} has requested a withdrawal of ৳${amount} via ${method}.`,
+            type: "system", // Kept as 'system' or 'withdraw_request' based on your layout needs
+            path: "/admin/withdraws",
+          }),
+        });
+      } else {
+        console.warn(
+          "Withdraw Notification skipped: ADMIN_ID is not defined in environment variables.",
+        );
+      }
+    } catch (notifErr) {
+      console.error(
+        "Failed to route withdrawal notification to admin:",
+        notifErr,
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Withdrawal request processed",
