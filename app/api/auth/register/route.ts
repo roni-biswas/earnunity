@@ -84,6 +84,35 @@ export async function POST(req: Request) {
           { _id: referrerUser._id },
           { $inc: { balance: INSTANT_BONUS } },
         );
+
+        // ===================================================================
+        // NEW: Trigger Live Notification to Referrer (Instant Bonus Alert)
+        // ===================================================================
+        try {
+          const siteUrl =
+            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+          /**
+           * Invoking internal notifications route to push a live notification token
+           * targeted directly toward the referrer user's active session stream.
+           */
+          await fetch(`${siteUrl}/api/notifications`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: referrerUser._id.toString(), // Sends update payload straight to the original referrer
+              title: "New Referral Bonus! 👥💸",
+              message: `Awesome! ${name} joined using your code. You earned an instant bonus of ৳${INSTANT_BONUS}!`,
+              type: "system",
+              path: "/dashboard/referrals", // Redirects user cleanly onto their team summary overview
+            }),
+          });
+        } catch (notifErr) {
+          console.error(
+            "Failed to fire referral join notification trigger:",
+            notifErr,
+          );
+        }
       }
     }
 

@@ -100,16 +100,17 @@ export async function PATCH(req: Request, { params }: RouteParams) {
             balanceAfter: referrerNewBalance,
           });
 
-          /* 1. Send live notification to the Referrer */
+          /* 1. Send live notification to the Referrer (Converted to string & updated currency symbol) */
           try {
             await fetch(`${siteUrl}/api/notifications`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                userId: referralTrack.referrerId,
-                title: "Referral Bonus Received! 👥",
-                message: `You earned $${TASK_COMPLETION_BONUS} milestone bonus because ${user.name} completed a task.`,
+                userId: referralTrack.referrerId.toString(),
+                title: "Referral Milestone Bonus! 👥💸",
+                message: `You earned ৳${TASK_COMPLETION_BONUS} milestone bonus because ${user.name} completed their first task.`,
                 type: "referral",
+                path: "/dashboard/referrals",
               }),
             });
           } catch (notifErr) {
@@ -141,17 +142,17 @@ export async function PATCH(req: Request, { params }: RouteParams) {
 
     const dynamicPath = `/dashboard/tasks/${submission.jobId._id}`;
 
-    /* 2. Send live notification to the Worker (Task Submitter) */
+    /* 2. Send live notification to the Worker / Task Submitter (Fixed string parsing & currency) */
     try {
       await fetch(`${siteUrl}/api/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: submission.userId,
+          userId: submission.userId.toString(),
           title: isApproved ? "Task Approved! 🎉" : "Task Rejected ❌",
           message: isApproved
-            ? `Your submission for '${submission.jobId.title}' has been approved. $${submission.jobId.reward} added to your wallet.`
-            : `Your submission for '${submission.jobId.title}' was rejected by admin. Please check the requirements.`,
+            ? `Your submission for '${submission.jobId.title}' has been approved. ৳${submission.jobId.reward} added to your wallet.`
+            : `Your submission for '${submission.jobId.title}' was rejected by admin. Please check the task guidelines.`,
           type: isApproved ? "task_approved" : "task_rejected",
           path: dynamicPath,
         }),
