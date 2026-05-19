@@ -76,7 +76,6 @@ export async function PATCH(
 
       // Determine dynamic visual markers and titles based on admin action
       const isApproved = status === "completed"; // Matching your frontend terminology
-      const notifIcon = isApproved ? "✅" : "❌";
       const notifTitle = isApproved
         ? "Withdrawal Approved! 💰"
         : "Withdrawal Rejected! ❌";

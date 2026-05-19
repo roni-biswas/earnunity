@@ -13,12 +13,14 @@ import {
   ChevronDown,
   Loader2,
   Check,
+  Zap, // Imported an energetic icon for newly added tasks
 } from "lucide-react";
 import { DashboardSidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSocket, INotificationPayload } from "@/providers/SocketProvider";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner"; // Imported to handle beautiful real-time toast alert popups
 
 export function DashboardNavbar() {
   const { data: session } = { data: useSession().data };
@@ -72,15 +74,41 @@ export function DashboardNavbar() {
   useEffect(() => {
     if (!socket) return;
 
+    // 1. Core single-user notification listener
     socket.on("new_notification", (newNotification: INotificationPayload) => {
       setNotifications((prev) => [newNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
     });
 
+    // ===================================================================
+    // 2. NEW GLOBAL LISTENER: Catch live task publications from Admin post
+    // ===================================================================
+    socket.on(
+      "new_task_published",
+      (data: { title: string; message: string; path: string }) => {
+        /**
+         * Triggers a non-intrusive Sonner flash token toast.
+         * Appends an interactive trigger key so users can instantly hop directly onto the task stack.
+         */
+        toast.success(data.title, {
+          description: data.message,
+          duration: 6000, // Stays visible for 6 seconds so user doesn't miss it
+          icon: (
+            <Zap className="w-4 h-4 text-amber-400 fill-amber-400 animate-bounce" />
+          ),
+          action: {
+            label: "Earn Now 💰",
+            onClick: () => router.push(data.path),
+          },
+        });
+      },
+    );
+
     return () => {
       socket.off("new_notification");
+      socket.off("new_task_published"); // Properly tearing down global thread channels
     };
-  }, [socket]);
+  }, [socket, router]);
 
   /* Push batch update parameters to database endpoint via safe async handlers */
   const handleMarkAllAsRead = async () => {
@@ -186,10 +214,10 @@ export function DashboardNavbar() {
                         <div
                           key={n._id}
                           onClick={async () => {
-                            // ১. ড্রপডাউন র‍্যাপারটি সাথে সাথে বন্ধ করে দেওয়া হলো
+                            // Dropdown wrapper instance close
                             setShowNotifications(false);
 
-                            // ২. যদি নোটিফিকেশনটি আনরিড (false) থাকে, ব্যাকএন্ডে সিঙ্গেল আপডেট ফায়ার হবে
+                            // If unread false in notification, single fire on backend
                             if (!n.isRead) {
                               try {
                                 const res = await fetch("/api/notifications", {
@@ -201,7 +229,7 @@ export function DashboardNavbar() {
                                 });
 
                                 if (res.ok) {
-                                  // UI লোকাল স্টেট আপডেট ও কাউন্টার মাইনাস ১ করা
+                                  // UI local test update and minus count 1
                                   setNotifications((prev) =>
                                     prev.map((item) =>
                                       item._id === n._id
@@ -221,7 +249,7 @@ export function DashboardNavbar() {
                               }
                             }
 
-                            // ৩. নির্দিষ্ট পাথে রিডাইরেক্ট করা
+                            // Request a specific path
                             if (n.path) {
                               router.push(n.path);
                             }

@@ -63,6 +63,26 @@ export async function POST(req: Request) {
       userId: session.user.id,
     });
 
+    // ===================================================================
+    // GLOBAL BROADCAST: Notify all live connected users about the new task
+    // ===================================================================
+    try {
+      const globalIo = (global as any).io;
+      if (globalIo) {
+        /**
+         * Emitting a global event to all sockets currently alive on EarnUnity.
+         * We pass structured metadata including title, message, and target routing path.
+         */
+        globalIo.emit("new_task_published", {
+          title: "New Task Available! 🚀",
+          message: `A new task "${validatedData.title || "Mission"}" has been posted. Earn rewards now!`,
+          path: "/dashboard/tasks", // Redirection hook for client context
+        });
+      }
+    } catch (socketErr) {
+      console.error("Global task broadcast notification failed:", socketErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Job posted successfully",
