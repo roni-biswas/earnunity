@@ -341,7 +341,7 @@ export function DashboardNavbar() {
                     priority
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center">
+                  <div className="w-full h-full bg-linear-to-tr from-indigo-500 to-violet-600 flex items-center justify-center">
                     <User className="text-white w-6 h-6" />
                   </div>
                 )}
@@ -356,7 +356,7 @@ export function DashboardNavbar() {
 
       {/* --- Mobile Sidebar Drawer --- */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] md:hidden overflow-hidden">
+        <div className="fixed inset-0 z-100 md:hidden overflow-hidden">
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setIsMobileMenuOpen(false)}
