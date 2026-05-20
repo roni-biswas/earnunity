@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import {
   Menu,
@@ -13,14 +13,14 @@ import {
   ChevronDown,
   Loader2,
   Check,
-  Zap, // Imported an energetic icon for newly added tasks
+  Zap,
 } from "lucide-react";
 import { DashboardSidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSocket, INotificationPayload } from "@/providers/SocketProvider";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner"; // Imported to handle beautiful real-time toast alert popups
+import { toast } from "sonner";
 import Link from "next/link";
 
 export function DashboardNavbar() {
@@ -37,6 +37,28 @@ export function DashboardNavbar() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter();
+
+  // Create a ref for the entire notification wrapper (button + panel)
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  /* Click outside handler to close notification dropdown */
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setShowNotifications(false);
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotifications]);
 
   /* Page scroll lock when mobile menu open */
   useEffect(() => {
@@ -75,25 +97,17 @@ export function DashboardNavbar() {
   useEffect(() => {
     if (!socket) return;
 
-    // 1. Core single-user notification listener
     socket.on("new_notification", (newNotification: INotificationPayload) => {
       setNotifications((prev) => [newNotification, ...prev]);
       setUnreadCount((prev) => prev + 1);
     });
 
-    // ===================================================================
-    // 2. NEW GLOBAL LISTENER: Catch live task publications from Admin post
-    // ===================================================================
     socket.on(
       "new_task_published",
       (data: { title: string; message: string; path: string }) => {
-        /**
-         * Triggers a non-intrusive Sonner flash token toast.
-         * Appends an interactive trigger key so users can instantly hop directly onto the task stack.
-         */
         toast.success(data.title, {
           description: data.message,
-          duration: 6000, // Stays visible for 6 seconds so user doesn't miss it
+          duration: 6000,
           icon: (
             <Zap className="w-4 h-4 text-amber-400 fill-amber-400 animate-bounce" />
           ),
@@ -107,7 +121,7 @@ export function DashboardNavbar() {
 
     return () => {
       socket.off("new_notification");
-      socket.off("new_task_published"); // Properly tearing down global thread channels
+      socket.off("new_task_published");
     };
   }, [socket, router]);
 
@@ -116,7 +130,6 @@ export function DashboardNavbar() {
     if (unreadCount === 0) return;
 
     try {
-      // Optimistic UI updates to avoid asynchronous lag on client click actions
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
@@ -128,7 +141,7 @@ export function DashboardNavbar() {
 
   return (
     <>
-      <nav className="h-20 border-b border-slate-800 bg-[#020617]/95 backdrop-blur-md flex items-center justify-between px-6 md:px-10 sticky top-0 z-60">
+      <nav className="h-20 border-b border-slate-800 bg-[#020617]/95 backdrop-blur-md flex items-center justify-between px-6 md:px-10 sticky top-0 z-50">
         {/* --- Left Side: Mobile Toggle & Status Badge --- */}
         <div className="flex items-center gap-4">
           <button
@@ -151,8 +164,8 @@ export function DashboardNavbar() {
 
         {/* --- Right Side: Notifications & User Profile --- */}
         <div className="flex items-center gap-4 md:gap-8">
-          {/* Notification Clickable Icon */}
-          <div className="relative">
+          {/* Notification Container wrapped with ref for outside click tracking */}
+          <div className="relative" ref={notificationRef}>
             <button
               type="button"
               title="Toggle Notifications"
@@ -174,140 +187,131 @@ export function DashboardNavbar() {
 
             {/* Notification Dropdown Panel */}
             {showNotifications && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowNotifications(false)}
-                />
-                <div className="absolute right-0 mt-4 w-80 bg-[#0b0f1a] border border-slate-800 rounded-[1.5rem] shadow-2xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                  <div className="p-5 border-b border-slate-800 bg-slate-900/30 flex justify-between items-center">
-                    <h3 className="text-sm font-bold text-white uppercase italic">
-                      Alert Center
-                    </h3>
-                    {unreadCount > 0 ? (
-                      <button
-                        onClick={handleMarkAllAsRead}
-                        className="text-[10px] text-indigo-400 font-black hover:text-indigo-300 flex items-center gap-1.5 transition-colors"
-                      >
-                        <Check className="w-3 h-3" /> Mark all read
-                      </button>
-                    ) : (
-                      <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-black">
-                        SYNCED
-                      </span>
-                    )}
-                  </div>
+              <div className="absolute right-0 mt-4 w-80 bg-[#0b0f1a] border border-slate-800 rounded-[1.5rem] shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                <div className="p-5 border-b border-slate-800 bg-slate-900/30 flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-white uppercase italic">
+                    Alert Center
+                  </h3>
+                  {unreadCount > 0 ? (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-[10px] text-indigo-400 font-black hover:text-indigo-300 flex items-center gap-1.5 transition-colors"
+                    >
+                      <Check className="w-3 h-3" /> Mark all read
+                    </button>
+                  ) : (
+                    <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-black">
+                      SYNCED
+                    </span>
+                  )}
+                </div>
 
-                  {/* Dynamic Notification Wrapper */}
-                  <div className="max-h-87.5 overflow-y-auto no-scrollbar">
-                    {loading ? (
-                      <div className="flex justify-center items-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-xs text-slate-500 font-medium">
-                          No updates available
-                        </p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n._id}
-                          onClick={async () => {
-                            // Dropdown wrapper instance close
-                            setShowNotifications(false);
+                {/* Dynamic Notification Wrapper */}
+                <div className="max-h-87.5 overflow-y-auto no-scrollbar">
+                  {loading ? (
+                    <div className="flex justify-center items-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-xs text-slate-500 font-medium">
+                        No updates available
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n._id}
+                        onClick={async () => {
+                          setShowNotifications(false);
 
-                            // If unread false in notification, single fire on backend
-                            if (!n.isRead) {
-                              try {
-                                const res = await fetch("/api/notifications", {
-                                  method: "PATCH",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({ id: n._id }),
-                                });
+                          if (!n.isRead) {
+                            try {
+                              const res = await fetch("/api/notifications", {
+                                method: "PATCH",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({ id: n._id }),
+                              });
 
-                                if (res.ok) {
-                                  // UI local test update and minus count 1
-                                  setNotifications((prev) =>
-                                    prev.map((item) =>
-                                      item._id === n._id
-                                        ? { ...item, isRead: true }
-                                        : item,
-                                    ),
-                                  );
-                                  setUnreadCount((prev) =>
-                                    Math.max(0, prev - 1),
-                                  );
-                                }
-                              } catch (err) {
-                                console.error(
-                                  "Single notification mark read error:",
-                                  err,
+                              if (res.ok) {
+                                setNotifications((prev) =>
+                                  prev.map((item) =>
+                                    item._id === n._id
+                                      ? { ...item, isRead: true }
+                                      : item,
+                                  ),
                                 );
+                                setUnreadCount((prev) => Math.max(0, prev - 1));
                               }
+                            } catch (err) {
+                              console.error(
+                                "Single notification mark read error:",
+                                err,
+                              );
                             }
+                          }
 
-                            // Request a specific path
-                            if (n.path) {
-                              router.push(n.path);
-                            }
-                          }}
-                          className={cn(
-                            "p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-all cursor-pointer group",
-                            !n.isRead && "bg-indigo-600/5",
-                          )}
-                        >
-                          <div className="flex gap-4">
-                            <div
+                          if (n.path) {
+                            router.push(n.path);
+                          }
+                        }}
+                        className={cn(
+                          "p-4 border-b border-slate-800/50 hover:bg-slate-800/30 transition-all cursor-pointer group",
+                          !n.isRead && "bg-indigo-600/5",
+                        )}
+                      >
+                        <div className="flex gap-4">
+                          <div
+                            className={cn(
+                              "p-2 rounded-lg h-fit transition-colors border",
+                              n.isRead
+                                ? "bg-slate-900 border-slate-800 text-slate-500"
+                                : "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white",
+                            )}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <p
                               className={cn(
-                                "p-2 rounded-lg h-fit transition-colors border",
+                                "text-[13px] font-bold transition-colors",
                                 n.isRead
-                                  ? "bg-slate-900 border-slate-800 text-slate-500"
-                                  : "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white",
+                                  ? "text-slate-400 group-hover:text-slate-300"
+                                  : "text-slate-200 group-hover:text-indigo-400",
                               )}
                             >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1">
-                              <p
-                                className={cn(
-                                  "text-[13px] font-bold transition-colors",
-                                  n.isRead
-                                    ? "text-slate-400 group-hover:text-slate-300"
-                                    : "text-slate-200 group-hover:text-indigo-400",
-                                )}
-                              >
-                                {n.title}
-                              </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                                {n.message}
-                              </p>
-                              <div className="flex items-center gap-1.5 mt-2 text-slate-600">
-                                <Clock className="w-3 h-3" />
-                                <span className="text-[9px] font-bold uppercase tracking-tighter">
-                                  {new Date(n.createdAt).toLocaleTimeString(
-                                    [],
-                                    { hour: "2-digit", minute: "2-digit" },
-                                  )}
-                                </span>
-                              </div>
+                              {n.title}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                              {n.message}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-2 text-slate-600">
+                              <Clock className="w-3 h-3" />
+                              <span className="text-[9px] font-bold uppercase tracking-tighter">
+                                {new Date(n.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
                             </div>
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-
-                  <button className="w-full py-4 text-[11px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest border-t border-slate-800">
-                    <Link href={"/dashboard/notifications"}>
-                      See All History
-                    </Link>
-                  </button>
+                      </div>
+                    ))
+                  )}
                 </div>
-              </>
+
+                {/* Fixed "See All History" Button inside dropdown */}
+                <Link
+                  href="/dashboard/notifications"
+                  onClick={() => setShowNotifications(false)}
+                  className="block w-full py-4 text-center text-[11px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest border-t border-slate-800 bg-[#0b0f1a]"
+                >
+                  See All History
+                </Link>
+              </div>
             )}
           </div>
 
@@ -337,7 +341,7 @@ export function DashboardNavbar() {
                     priority
                   />
                 ) : (
-                  <div className="w-full h-full bg-linear-to-tr from-indigo-500 to-violet-600 flex items-center justify-center">
+                  <div className="w-full h-full bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center">
                     <User className="text-white w-6 h-6" />
                   </div>
                 )}
@@ -352,7 +356,7 @@ export function DashboardNavbar() {
 
       {/* --- Mobile Sidebar Drawer --- */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-100 md:hidden overflow-hidden">
+        <div className="fixed inset-0 z-[100] md:hidden overflow-hidden">
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setIsMobileMenuOpen(false)}
