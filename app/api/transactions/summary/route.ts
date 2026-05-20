@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import { Transaction } from "@/models/Transaction";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
 export async function GET() {
   try {
@@ -16,9 +17,14 @@ export async function GET() {
       );
     }
 
-    // Use MongoDB Aggregation to calculate totals efficiently
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
+
     const summary = await Transaction.aggregate([
-      { $match: { userId: session.user.id } },
+      {
+        $match: {
+          userId: userObjectId,
+        },
+      },
       {
         $group: {
           _id: null,
@@ -58,9 +64,10 @@ export async function GET() {
         netBalance: stats.totalEarned - stats.totalWithdrawn,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { success: false, message: "Error fetching summary" },
+      { success: false, message: "Error fetching summary", error: err.message },
       { status: 500 },
     );
   }

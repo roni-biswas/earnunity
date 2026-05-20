@@ -21,6 +21,7 @@ import Image from "next/image";
 import { useSocket, INotificationPayload } from "@/providers/SocketProvider";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner"; // Imported to handle beautiful real-time toast alert popups
+import Link from "next/link";
 
 export function DashboardNavbar() {
   const { data: session } = { data: useSession().data };
@@ -301,7 +302,9 @@ export function DashboardNavbar() {
                   </div>
 
                   <button className="w-full py-4 text-[11px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest border-t border-slate-800">
-                    See All History
+                    <Link href={"/dashboard/notifications"}>
+                      See All History
+                    </Link>
                   </button>
                 </div>
               </>
