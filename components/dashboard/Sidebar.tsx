@@ -152,7 +152,12 @@ export function DashboardSidebar() {
 
             <Link
               href="/dashboard/privacy"
-              className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/40 group whitespace-nowrap"
+              className={cn(
+                "flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all group whitespace-nowrap",
+                pathname === "/dashboard/privacy"
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40",
+              )}
             >
               <ShieldCheck className="w-4.5 h-4.5 group-hover:text-indigo-400" />
               <span className="font-bold text-[13px]">Privacy Policy</span>
@@ -160,7 +165,12 @@ export function DashboardSidebar() {
 
             <Link
               href="/dashboard/terms"
-              className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/40 group whitespace-nowrap"
+              className={cn(
+                "flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all group whitespace-nowrap",
+                pathname === "/dashboard/terms"
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/40",
+              )}
             >
               <FileText className="w-4.5 h-4.5 group-hover:text-indigo-400" />
               <span className="font-bold text-[13px]">Terms & Conditions</span>
