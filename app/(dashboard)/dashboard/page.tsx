@@ -14,7 +14,14 @@ import ReferralCard from "@/components/dashboard/ReferralCard";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Dashboard Overview | EarnUnity",
+  title: "Dashboard Overview",
+  description:
+    "Track your micro-task completions, monitor real-time wallet statistics, and view live system earning updates on EarnUnity.",
+  // Robots protection for search engine private page not indexing
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function OverviewPage() {
