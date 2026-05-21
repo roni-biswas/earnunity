@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import SubmissionForm from "./SubmissionForm"; // Ensure this client component exists
+import { Metadata } from "next"; // Added for SEO Types
 import {
   BadgeCheck,
   DollarSign,
@@ -22,6 +23,33 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+// DYNAMIC METADATA FOR ADVANCED SEO
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  await connectDB();
+
+  const job = await Job.findById(id);
+
+  if (!job) {
+    return {
+      title: "Task Not Found | EarnUnity",
+    };
+  }
+
+  const spotsLeft = (job.totalVacancies || 0) - (job.completedCount || 0);
+
+  return {
+    title: `${job.title} - Earn ${job.reward}`,
+    description: `Complete this ${job.category || "Micro"} task on EarnUnity. Claim your ${job.reward} instant reward. Only ${spotsLeft} spots left!`,
+    // Private Dashboard page, so prevent Google indexing if required
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
+
+//  MAIN COMPONENT
 export default async function JobDetailsPage({ params }: Props) {
   const { id } = await params;
 
