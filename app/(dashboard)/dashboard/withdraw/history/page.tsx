@@ -6,7 +6,14 @@ import { ArrowLeft, ReceiptText } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Withdrawal History | EarnUnity",
+  title: "Withdrawal History",
+  description:
+    "View and track all your past payout requests on EarnUnity. Monitor the status of your bKash, Nagad, or Rocket withdrawal transactions in real-time.",
+  // Private Dashboard page, so prevent Google indexing if required
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 /**

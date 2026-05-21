@@ -10,7 +10,31 @@ import { Users, Coins, Clock, UserCheck, Calendar } from "lucide-react";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-  title: "Network Referrals | EarnUnity",
+  title: "Refer & Earn",
+  description:
+    "Invite your friends to join EarnUnity and build your ultimate earning network! Earn a lifetime percentage of commission on every micro-task your referrals complete.",
+
+  // Private Dashboard page, so prevent Google indexing if required
+  robots: {
+    index: false,
+    follow: false,
+  },
+
+  // Pro view Optimization for social media sharing (OpenGraph)
+  openGraph: {
+    title: "Invite Friends & Earn Lifetime Commission | EarnUnity",
+    description:
+      "Join EarnUnity using my referral network. Complete simple tasks, claim rewards, and secure instant payouts together!",
+    type: "website",
+    images: [
+      {
+        url: "https://earnunity.com/images/referral-banner.png",
+        width: 1200,
+        height: 630,
+        alt: "EarnUnity Referral Network",
+      },
+    ],
+  },
 };
 
 interface PopulatedUser {

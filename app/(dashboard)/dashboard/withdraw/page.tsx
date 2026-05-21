@@ -6,7 +6,14 @@ import { Wallet, History, AlertCircle, Clock } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Withdraw Funds | EarnUnity",
+  title: "Withdraw Funds",
+  description:
+    "Securely withdraw your earnings from EarnUnity. Check your available balance and request instant payouts directly to your verified payment gateway.",
+  // Private Dashboard page, so prevent Google indexing if required
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function WithdrawPage() {
