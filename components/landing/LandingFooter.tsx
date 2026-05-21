@@ -175,9 +175,6 @@ export function LandingFooter() {
                 <Link href="/terms-conditions">Terms & Conditions</Link>
               </li>
               <li className="hover:text-white transition-colors">
-                <Link href="/payout-policy">Payout Policy</Link>
-              </li>
-              <li className="hover:text-white transition-colors">
                 <Link href="/support">Help Center</Link>
               </li>
             </ul>
