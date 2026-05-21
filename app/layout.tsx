@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   },
   description:
     "Join EarnUnity, the ultimate community-based micro-earning platform. Complete simple digital tasks, claim rewards, and secure verified fast payouts instantly.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+  },
   keywords: [
     "micro earning",
     "earn money online",
