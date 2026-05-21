@@ -3,11 +3,13 @@ import connectDB from "@/lib/db";
 import { Transaction } from "@/models/Transaction";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(req: Request, { params }: RouteParams) {
   try {
     await connectDB();
     const { id } = await params;
@@ -27,9 +29,13 @@ export async function GET(
       createdAt: -1,
     });
 
+    const targetUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
+
     // Summary for this specific user to spot patterns
     const userStats = await Transaction.aggregate([
-      { $match: { userId: new Object(userId) } }, // Use mongoose.Types.ObjectId(userId) if needed
+      { $match: { userId: targetUserId } },
       {
         $group: {
           _id: "$category",

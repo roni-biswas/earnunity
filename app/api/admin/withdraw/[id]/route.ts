@@ -6,10 +6,11 @@ import { Transaction } from "@/models/Transaction";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function PATCH(req: Request, { params }: RouteParams) {
   try {
     await connectDB();
     const { id } = await params;

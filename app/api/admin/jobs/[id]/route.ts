@@ -4,11 +4,12 @@ import { Job } from "@/models/Job";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
 // PATCH: Update job details or status
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(req: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     await connectDB();
@@ -45,10 +46,7 @@ export async function PATCH(
 }
 
 // DELETE API Route
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     await connectDB();
@@ -71,6 +69,9 @@ export async function DELETE(
     }
     return NextResponse.json({ success: true, message: "Job deleted" });
   } catch (error) {
-    return NextResponse.json({ message: "Delete failed" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Delete failed" },
+      { status: 500 },
+    );
   }
 }

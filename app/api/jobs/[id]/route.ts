@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { Job } from "@/models/Job";
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(req: Request, { params }: RouteParams) {
   try {
     await connectDB();
-    const job = await Job.findById(params.id);
+
+    const { id } = await params;
+    const job = await Job.findById(id);
 
     if (!job) {
       return NextResponse.json(

@@ -3,9 +3,9 @@ import { User } from "@/models/User";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
