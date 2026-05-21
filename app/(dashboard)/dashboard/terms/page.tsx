@@ -9,6 +9,7 @@ export default function TermsConditionsPage() {
       titleBn="শর্তাবলী এবং নিয়মাবলী"
       updatedEn="May 20, 2026"
       updatedBn="২০ মে, ২০২৬"
+      redirectLink="/dashboard"
       icon={<FileText className="w-6 h-6" />}
       // --- ENGLISH CONTENT ---
       contentEn={

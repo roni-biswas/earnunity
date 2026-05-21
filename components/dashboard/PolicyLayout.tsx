@@ -9,6 +9,7 @@ interface PolicyLayoutProps {
   titleBn: string;
   updatedEn: string;
   updatedBn: string;
+  redirectLink: string;
   icon: React.ReactNode;
   contentEn: React.ReactNode;
   contentBn: React.ReactNode;
@@ -22,6 +23,7 @@ export function PolicyLayout({
   icon,
   contentEn,
   contentBn,
+  redirectLink,
 }: PolicyLayoutProps) {
   const [lang, setLang] = useState<"en" | "bn">("en");
 
@@ -31,10 +33,11 @@ export function PolicyLayout({
         {/* --- Top Navigation & Language Switcher --- */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
           <Link
-            href="/dashboard"
+            href={redirectLink}
             className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-indigo-400 transition-colors self-start"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            <ArrowLeft className="w-4 h-4" />{" "}
+            {redirectLink === "/" ? "Back to Home" : "Back to Dashboard"}
           </Link>
 
           {/* Language Toggle Button */}

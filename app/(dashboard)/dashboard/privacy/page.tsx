@@ -9,6 +9,7 @@ export default function PrivacyPolicyPage() {
       titleBn="প্রাইভেসি পলিসি"
       updatedEn="May 20, 2026"
       updatedBn="২০ মে, ২০২৬"
+      redirectLink="/dashboard"
       icon={<ShieldCheck className="w-6 h-6" />}
       // --- ENGLISH CONTENT ---
       contentEn={

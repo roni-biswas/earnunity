@@ -154,13 +154,10 @@ export function LandingFooter() {
                 <Link href="/dashboard">Dashboard</Link>
               </li>
               <li className="hover:text-white transition-colors">
-                <Link href="/leaderboard">Leaderboard</Link>
+                <Link href="/dashboard/tasks">All Tasks</Link>
               </li>
               <li className="hover:text-white transition-colors">
-                <Link href="/tasks">All Tasks</Link>
-              </li>
-              <li className="hover:text-white transition-colors">
-                <Link href="/referrals">Referral Program</Link>
+                <Link href="/dashboard/referrals">Referral Program</Link>
               </li>
             </ul>
           </div>
