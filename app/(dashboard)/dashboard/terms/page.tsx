@@ -1,6 +1,26 @@
 import React from "react";
 import { FileText } from "lucide-react";
 import { PolicyLayout } from "@/components/dashboard/PolicyLayout";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Terms and Conditions",
+  description:
+    "Review the official terms of service, user responsibilities, and account rules of EarnUnity. Learn about our verification policies and payment conditions.",
+
+  robots: {
+    index: true,
+    follow: true,
+  },
+
+  openGraph: {
+    title: "Terms and Conditions - User Agreement | EarnUnity",
+    description:
+      "Please read the EarnUnity terms of service carefully before creating an account, completing tasks, or requesting withdrawals.",
+    type: "website",
+    url: "https://earnunity.com/terms-conditions",
+  },
+};
 
 export default function TermsConditionsPage() {
   return (

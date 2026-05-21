@@ -2,6 +2,26 @@ import React from "react";
 import { ShieldCheck } from "lucide-react";
 import { PolicyLayout } from "@/components/dashboard/PolicyLayout";
 
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Learn how EarnUnity collects, protects, and manages your personal data, wallet transactions, and account details. Read our user data protection guidelines.",
+
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: "Privacy Policy - User Data & Security | EarnUnity",
+    description:
+      "Your security is our priority. Read the EarnUnity Privacy Policy to understand how we safeguard your information and micro-task data.",
+    type: "website",
+    url: "https://earnunity.com/privacy-policy",
+  },
+};
+
 export default function PrivacyPolicyPage() {
   return (
     <PolicyLayout

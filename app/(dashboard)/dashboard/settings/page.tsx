@@ -12,7 +12,13 @@ import SecuritySettings from "@/components/dashboard/SecuritySettings";
 import DeviceStatus from "@/components/dashboard/DeviceStatus";
 
 export const metadata: Metadata = {
-  title: "Account Settings | EarnUnity",
+  title: "Account Settings",
+  description:
+    "Manage your EarnUnity profile, update password configurations, and monitor authorization metrics or active device logs securely.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function SettingsPage() {
