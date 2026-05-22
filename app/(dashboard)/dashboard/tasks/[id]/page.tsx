@@ -149,7 +149,7 @@ export default async function JobDetailsPage({ params }: Props) {
 
             {/* NEW: External Link Section for Copying/Visiting */}
             {missionLink && (
-              <div className="mt-8 p-5 bg-[#0b0f1a]/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="mt-8 p-5 bg-[#0b0f1a]/80 border border-slate-800 rounded-2xl flex flex-col gap-4">
                 <div className="space-y-1 overflow-hidden w-full">
                   <p className="text-[10px] text-indigo-400 font-black uppercase tracking-wider flex items-center gap-1.5">
                     <ExternalLink className="w-3 h-3" /> Mission Assignment Link
