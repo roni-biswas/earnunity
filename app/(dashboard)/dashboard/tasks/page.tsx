@@ -1,5 +1,6 @@
 import TasksClientView from "@/components/dashboard/tasks/TasksClientView";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Missions & Tasks",
@@ -12,5 +13,15 @@ export const metadata: Metadata = {
 };
 
 export default function TasksPage() {
-  return <TasksClientView />;
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 text-xs font-black uppercase tracking-widest text-slate-500 animate-pulse">
+          Loading Tasks Engine...
+        </div>
+      }
+    >
+      <TasksClientView />
+    </Suspense>
+  );
 }

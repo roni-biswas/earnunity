@@ -16,8 +16,10 @@ import {
   FileText,
   AlertCircle,
   ChevronLeft,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import CopyButton from "./CopyButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -41,7 +43,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${job.title} - Earn ${job.reward}`,
     description: `Complete this ${job.category || "Micro"} task on EarnUnity. Claim your ${job.reward} instant reward. Only ${spotsLeft} spots left!`,
-    // Private Dashboard page, so prevent Google indexing if required
     robots: {
       index: false,
       follow: false,
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-//  MAIN COMPONENT
+// MAIN COMPONENT
 export default async function JobDetailsPage({ params }: Props) {
   const { id } = await params;
 
@@ -77,6 +78,9 @@ export default async function JobDetailsPage({ params }: Props) {
     Math.round((job.completedCount / (totalSlots || 1)) * 100),
     100,
   );
+
+  // Fallback fallback link if externalLink doesn't exist in document
+  const missionLink = job.externalLink || "";
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-700">
@@ -142,6 +146,31 @@ export default async function JobDetailsPage({ params }: Props) {
                 {job.instructions || job.description}
               </p>
             </div>
+
+            {/* NEW: External Link Section for Copying/Visiting */}
+            {missionLink && (
+              <div className="mt-8 p-5 bg-[#0b0f1a]/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1 overflow-hidden w-full">
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-wider flex items-center gap-1.5">
+                    <ExternalLink className="w-3 h-3" /> Mission Assignment Link
+                  </p>
+                  <p className="text-sm text-slate-300 font-medium truncate bg-[#020617]/50 px-3 py-2 rounded-lg border border-slate-900/60 mt-1.5">
+                    {missionLink}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 sm:self-end">
+                  <CopyButton text={missionLink} />
+                  <a
+                    href={missionLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition flex items-center gap-1.5 h-9 shrink-0 shadow-md shadow-indigo-600/10"
+                  >
+                    Open Link
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Quick Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
