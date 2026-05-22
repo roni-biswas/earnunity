@@ -1,15 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-
 import { Controller, useForm } from "react-hook-form";
-
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { toast } from "sonner";
-
 import { useRouter } from "next/navigation";
-
 import {
   Loader2,
   ArrowLeft,
@@ -21,9 +16,7 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
-
 import { JobFormData, JobFormSchema } from "@/lib/validations/jobs";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,14 +37,21 @@ export default function CreateJobPage() {
 
   const {
     register,
-
     handleSubmit,
     control,
     formState: { errors },
   } = useForm<JobFormData>({
     resolver: zodResolver(JobFormSchema),
-
-    defaultValues: { category: "Other", proofType: "Screenshot" },
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "Other",
+      reward: 0,
+      totalVacancies: 0,
+      instructions: "",
+      externalLink: "",
+      proofType: "Screenshot",
+    },
   });
 
   const onSubmit = async (data: JobFormData) => {
@@ -192,7 +192,7 @@ export default function CreateJobPage() {
                 id="reward"
                 type="number"
                 step="0.01"
-                {...register("reward")}
+                {...register("reward", { valueAsNumber: true })}
                 className="rounded-xl h-11"
               />
               {errors.reward && (
@@ -207,7 +207,7 @@ export default function CreateJobPage() {
               <Input
                 id="totalVacancies"
                 type="number"
-                {...register("totalVacancies")}
+                {...register("totalVacancies", { valueAsNumber: true })}
                 className="rounded-xl h-11"
                 placeholder="100"
               />
