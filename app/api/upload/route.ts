@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Internal Upload Error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Upload failed" },
+      { success: false, message: error || "Upload failed" },
       { status: 500 },
     );
   }
